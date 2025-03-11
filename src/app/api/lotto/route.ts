@@ -117,10 +117,8 @@ export async function POST(request: NextRequest) {
         prompt = '로또 번호 6개를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
     }
 
-    prompt += '\n\n결과는 다음과 같은 JSON 형식으로 제공해주세요:\n{
-      "numbers": [1, 2, 3, 4, 5, 6],
-      "explanation": "번호 선택 이유에 대한 설명"
-    }';
+    prompt = prompt + " " + "Please provide the result in the following JSON format: " + 
+      '{"numbers": [1, 2, 3, 4, 5, 6], "explanation": "번호 선택 이유에 대한 설명"}';
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
