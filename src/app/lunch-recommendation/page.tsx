@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useToast } from "@/components/ui/use-toast";
 import { getWeatherInfo, getCoordinates, searchNearbyRestaurants } from '@/lib/api';
+import RouletteWheel from '@/components/RouletteWheel';
 
 // Google Gemini API 키
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
@@ -43,6 +44,10 @@ export default function LunchRecommendation() {
   const [recommendation, setRecommendation] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  
+  // 룰렛 관련 상태 추가
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [selectedMenuIndex, setSelectedMenuIndex] = useState<number>(0);
   
   // 위치 정보 가져오기
   useEffect(() => {
@@ -191,6 +196,30 @@ export default function LunchRecommendation() {
     { name: '샐러드', image: '🥗', category: '다이어트', calories: 300, price: '10,000원' }
   ];
 
+  // 점심 메뉴 20가지 옵션
+  const lunchOptions = [
+    { name: '김치찌개', category: '한식', calories: 500, price: '8,000원' },
+    { name: '된장찌개', category: '한식', calories: 450, price: '8,000원' },
+    { name: '비빔밥', category: '한식', calories: 600, price: '9,000원' },
+    { name: '삼겹살', category: '한식', calories: 800, price: '15,000원' },
+    { name: '짜장면', category: '중식', calories: 650, price: '7,000원' },
+    { name: '짬뽕', category: '중식', calories: 550, price: '8,000원' },
+    { name: '마라탕', category: '중식', calories: 700, price: '12,000원' },
+    { name: '탕수육', category: '중식', calories: 800, price: '15,000원' },
+    { name: '파스타', category: '양식', calories: 650, price: '12,000원' },
+    { name: '피자', category: '양식', calories: 900, price: '18,000원' },
+    { name: '햄버거', category: '양식', calories: 700, price: '8,000원' },
+    { name: '스테이크', category: '양식', calories: 800, price: '25,000원' },
+    { name: '초밥', category: '일식', calories: 500, price: '15,000원' },
+    { name: '라멘', category: '일식', calories: 550, price: '9,000원' },
+    { name: '우동', category: '일식', calories: 450, price: '8,000원' },
+    { name: '돈카츠', category: '일식', calories: 700, price: '12,000원' },
+    { name: '쌀국수', category: '동남아', calories: 500, price: '9,000원' },
+    { name: '팟타이', category: '동남아', calories: 550, price: '10,000원' },
+    { name: '나시고랭', category: '동남아', calories: 600, price: '11,000원' },
+    { name: '똠양꿍', category: '동남아', calories: 450, price: '12,000원' }
+  ];
+
   // 실제 식당 데이터 (카테고리별)
   const realRestaurants = {
     한식: [
@@ -259,18 +288,26 @@ export default function LunchRecommendation() {
         throw new Error('위치 정보가 없습니다.');
       }
 
-      // 네이버 플레이스 URL 생성 함수
-      const getNaverPlaceUrl = (query: string, coords: { latitude: number; longitude: number }) => {
-        return `https://map.naver.com/p/search/${encodeURIComponent(query)}?c=${coords.longitude},${coords.latitude},15,0,0,0,dh`;
-      };
+      // 실제 식당 데이터에서 해당 카테고리의 식당 3개를 랜덤하게 선택
+      const categoryRestaurants = realRestaurants[foodCategory as keyof typeof realRestaurants] || [];
+      const selectedRestaurants = categoryRestaurants
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
 
-      // 검색 키워드 생성 (현재 위치 기반)
-      const searchKeyword = `${location} ${foodCategory} 맛집`;
-      const placeUrl = getNaverPlaceUrl(searchKeyword, userCoords);
+      // 네이버 플레이스 URL 생성
+      const placeUrl = `https://map.naver.com/p/search/${encodeURIComponent(`${location} ${foodCategory} 맛집`)}?c=${userCoords.longitude},${userCoords.latitude},15,0,0,0,dh`;
 
-      // 기본 데이터 반환 (API 호출 실패 시에도 사용)
-      const defaultRestaurants = [
-        {
+      // 선택된 식당들에 거리 정보 추가
+      const restaurantsWithDistance = selectedRestaurants.map(restaurant => ({
+        ...restaurant,
+        distance: '1km 이내',
+        placeUrl: placeUrl,
+        category: foodCategory,
+        reviews: Math.floor(Math.random() * 900) + 100
+      }));
+
+      return {
+        restaurants: restaurantsWithDistance.length > 0 ? restaurantsWithDistance : [{
           name: `${location}의 ${foodCategory} 맛집`,
           rating: '★★★★☆',
           address: location,
@@ -278,61 +315,23 @@ export default function LunchRecommendation() {
           category: foodCategory,
           reviews: 100,
           placeUrl: placeUrl
-        }
-      ];
-
-      // 네이버 검색 API 호출
-      const response = await fetch(
-        `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(searchKeyword)}&display=3&sort=random`,
-        {
-          headers: {
-            'X-Naver-Client-Id': process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || '',
-            'X-Naver-Client-Secret': process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET || ''
-          }
-        }
-      );
-
-      if (!response.ok) {
-        return { restaurants: defaultRestaurants, nearbyUrl: placeUrl };
-      }
-
-      const data = await response.json();
-
-      // API 응답 데이터 가공 (최대 3개로 제한)
-      const restaurants = data.items.slice(0, 3).map((item: any) => {
-        const restaurantPlaceUrl = getNaverPlaceUrl(item.title.replace(/<[^>]*>/g, ''), userCoords);
-
-        return {
-          name: item.title.replace(/<[^>]*>/g, ''),
-          rating: '★'.repeat(Math.floor(Math.random() * 2) + 4) + '☆'.repeat(5 - (Math.floor(Math.random() * 2) + 4)),
-          address: item.address,
-          distance: '1km 이내',
-          category: foodCategory,
-          reviews: Math.floor(Math.random() * 1000) + 100,
-          placeUrl: restaurantPlaceUrl
-        };
-      });
-
-      return {
-        restaurants: restaurants.length > 0 ? restaurants : defaultRestaurants,
+        }],
         nearbyUrl: placeUrl
       };
     } catch (error) {
       console.error('식당 검색 오류:', error);
-      const defaultPlaceUrl = `https://map.naver.com/p/search/${encodeURIComponent(`${location} ${foodCategory} 맛집`)}?c=${userCoords.longitude},${userCoords.latitude},15,0,0,0,dh`;
+      const defaultPlaceUrl = `https://map.naver.com/p/search/${encodeURIComponent(`${location} ${foodCategory} 맛집`)}?c=${userCoords?.longitude || '127.027610'},${userCoords?.latitude || '37.498095'},15,0,0,0,dh`;
       
       return {
-        restaurants: [
-          {
-            name: `${location}의 ${foodCategory} 맛집`,
-            rating: '★★★★☆',
-            address: location,
-            distance: '1km 이내',
-            category: foodCategory,
-            reviews: 100,
-            placeUrl: defaultPlaceUrl
-          }
-        ],
+        restaurants: [{
+          name: `${location}의 ${foodCategory} 맛집`,
+          rating: '★★★★☆',
+          address: location,
+          distance: '1km 이내',
+          category: foodCategory,
+          reviews: 100,
+          placeUrl: defaultPlaceUrl
+        }],
         nearbyUrl: defaultPlaceUrl
       };
     }
@@ -407,7 +406,19 @@ export default function LunchRecommendation() {
               parts: [{
                 text: prompt
               }]
-            }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 1,
+              topP: 1,
+              maxOutputTokens: 1000,
+            },
+            safetySettings: [
+              {
+                category: "HARM_CATEGORY_HARASSMENT",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              }
+            ]
           })
         });
 
@@ -502,14 +513,29 @@ export default function LunchRecommendation() {
     };
   };
 
-  // 랜덤 추천
-  const getRandomFood = async () => {
+  // 룰렛 돌리기
+  const spinRoulette = async () => {
     try {
       setIsLoading(true);
       setStep('loading');
       
-      const randomIndex = Math.floor(Math.random() * foodOptions.length);
-      const selectedFood = foodOptions[randomIndex];
+      // 룰렛 애니메이션 시작
+      const randomIndex = Math.floor(Math.random() * lunchOptions.length);
+      setSelectedMenuIndex(randomIndex);
+      setIsSpinning(true);
+      
+    } catch (error) {
+      console.error('룰렛 돌리기 오류:', error);
+      setError('추천을 가져오는데 실패했습니다. 다시 시도해주세요.');
+      setStep('options');
+      setIsLoading(false);
+    }
+  };
+
+  // 룰렛 애니메이션 종료 후 처리
+  const handleSpinEnd = async () => {
+    try {
+      const selectedFood = lunchOptions[selectedMenuIndex];
       
       // 선택된 음식에 맞는 실제 식당 정보 가져오기
       const result = await getRestaurantsForFood(selectedFood.category);
@@ -521,16 +547,17 @@ export default function LunchRecommendation() {
         },
         restaurants: result.restaurants,
         nearbyUrl: result.nearbyUrl,
-        reasonForRecommendation: `${location}의 현재 날씨는 ${weather}이며, 이런 날씨에는 ${selectedFood.name}이(가) 특히 잘 어울립니다. ${selectedFood.calories}kcal의 적절한 열량으로 점심 식사로 매우 적합합니다.`,
+        reasonForRecommendation: `오늘의 랜덤 메뉴로 ${selectedFood.name}이(가) 선택되었습니다! ${selectedFood.calories}kcal의 적절한 열량으로 점심 식사로 매우 적합합니다.`,
         healthTip: `${selectedFood.name}은(는) 천천히 씹어 먹으면서 맛을 음미하시면 좋습니다. 식사 후 10-15분 정도의 가벼운 산책은 소화를 돕고 오후 컨디션을 개선하는데 도움이 됩니다.`
       });
       
       setStep('result');
     } catch (error) {
-      console.error('랜덤 추천 오류:', error);
+      console.error('결과 처리 오류:', error);
       setError('추천을 가져오는데 실패했습니다. 다시 시도해주세요.');
       setStep('options');
     } finally {
+      setIsSpinning(false);
       setIsLoading(false);
     }
   };
@@ -677,12 +704,45 @@ export default function LunchRecommendation() {
         <Button 
           variant="outline"
           className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 shadow-lg rounded-xl py-6 flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-105 text-lg"
-          onClick={getRandomFood}
+          onClick={spinRoulette}
           disabled={isLoading}
         >
           <RefreshCw className="h-5 w-5" />
-          <span className="font-bold">AI 랜덤 추천</span>
+          <span className="font-bold">룰렛 돌리기</span>
         </Button>
+      </div>
+    </div>
+  );
+
+  // 로딩 화면 수정
+  const LoadingView = () => (
+    <div className="space-y-6 text-center">
+      <p className="text-lg text-gray-600 mb-6">
+        오늘의 메뉴를 정하고 있어요...
+      </p>
+      
+      <div className="relative flex justify-center mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-full blur-xl"></div>
+        <div className="relative w-full max-w-md mx-auto">
+          {isSpinning ? (
+            <RouletteWheel
+              items={lunchOptions}
+              spinning={isSpinning}
+              selectedIndex={selectedMenuIndex}
+              onSpinEnd={handleSpinEnd}
+            />
+          ) : (
+            <div className="flex justify-center">
+              <RefreshCw className="h-20 w-20 text-orange-600 animate-spin" />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-xl shadow-sm border border-orange-100">
+        <p className="text-orange-600 text-base font-medium animate-pulse">
+          {isSpinning ? '룰렛이 돌아가는 중이에요...' : '맛있는 점심 메뉴를 찾고 있어요...'}
+        </p>
       </div>
     </div>
   );
@@ -849,11 +909,11 @@ export default function LunchRecommendation() {
                   <Button 
                     variant="outline"
                     className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 shadow-lg rounded-xl py-6 flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-105 text-lg"
-                    onClick={getRandomFood}
+                    onClick={spinRoulette}
                     disabled={isLoading}
                   >
                     <RefreshCw className="h-5 w-5" />
-                    <span className="font-bold">AI 랜덤 추천</span>
+                    <span className="font-bold">룰렛 돌리기</span>
                   </Button>
                 </div>
                 
@@ -867,105 +927,7 @@ export default function LunchRecommendation() {
             
             {/* 로딩 화면 */}
             {step === 'loading' && (
-              <div className="space-y-6 text-center">
-                <p className="text-lg text-gray-600 mb-6">
-                  당신에게 맞는 점심 메뉴를 찾고 있어요...
-                </p>
-                
-                <div className="relative flex justify-center mb-8">
-                  <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-full blur-xl"></div>
-                  <div className="relative">
-                    <RefreshCw className="h-20 w-20 text-orange-600 animate-spin" />
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-xl shadow-sm border border-orange-100 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-200/20 to-yellow-200/20 rounded-full -mr-10 -mt-10"></div>
-                  <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-br from-orange-200/20 to-yellow-200/20 rounded-full -ml-8 -mb-8"></div>
-                  
-                  <div className="relative z-10 space-y-4">
-                    {mood && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                            <span className="text-xl">{moodOptions.find(m => m.value === mood)?.label.split(' ')[1] || '🤔'}</span>
-                          </div>
-                          <span className="text-base font-medium text-gray-700">현재 기분</span>
-                        </div>
-                        <span className="text-sm font-medium text-orange-600 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                          {mood}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {weather && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                            {weather === '맑음' && <Sun className="h-5 w-5 text-yellow-500" />}
-                            {weather === '흐림' && <CloudRain className="h-5 w-5 text-gray-500" />}
-                            {weather === '비' && <CloudRain className="h-5 w-5 text-blue-500" />}
-                            {(weather !== '맑음' && weather !== '흐림' && weather !== '비') && 
-                              <ThermometerSun className="h-5 w-5 text-orange-500" />}
-                          </div>
-                          <span className="text-base font-medium text-gray-700">현재 날씨</span>
-                        </div>
-                        <span className="text-sm font-medium text-orange-600 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                          {weather}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {location && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                            <MapPin className="h-5 w-5 text-orange-500" />
-                          </div>
-                          <span className="text-base font-medium text-gray-700">현재 위치</span>
-                        </div>
-                        <span className="text-sm font-medium text-orange-600 bg-white px-3 py-1.5 rounded-full shadow-sm truncate max-w-[150px]">
-                          {location}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {priceRange && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                            <span className="text-lg">💰</span>
-                          </div>
-                          <span className="text-base font-medium text-gray-700">가격대</span>
-                        </div>
-                        <span className="text-sm font-medium text-orange-600 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                          {priceRange}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {foodStyle && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                            <span className="text-lg">{foodStyleOptions.find(s => s.value === foodStyle)?.label.split(' ')[1] || '🍴'}</span>
-                          </div>
-                          <span className="text-base font-medium text-gray-700">음식 스타일</span>
-                        </div>
-                        <span className="text-sm font-medium text-orange-600 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                          {foodStyle}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 pt-4 border-t border-orange-200/50">
-                    <p className="text-orange-600 text-base font-medium animate-pulse">
-                      맛있는 점심 메뉴를 찾고 있어요...
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <LoadingView />
             )}
             
             {/* 결과 화면 */}

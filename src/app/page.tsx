@@ -5,6 +5,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
 
+interface CardData {
+  title: string;
+  description: string;
+  href: string;
+  icon: string;
+  isExternal: boolean;
+  badge?: string;
+}
+
 export default function Home() {
   // AI 서비스 카테고리 카드
   const aiServiceCards = [
@@ -13,7 +22,8 @@ export default function Home() {
       description: '음식 사진을 업로드하면 AI가 칼로리를 측정해 드립니다.',
       href: '/calorie-calculator',
       icon: '🍔',
-      isExternal: false
+      isExternal: false,
+      badge: '인기'
     },
     {
       title: '타로 운세보기',
@@ -27,14 +37,16 @@ export default function Home() {
       description: '위치, 날씨, 기분에 맞는 점심 메뉴를 추천해 드립니다.',
       href: '/lunch-recommendation',
       icon: '🍲',
-      isExternal: false
+      isExternal: false,
+      badge: '개발중'
     },
     {
       title: '손금 분석기',
-      description: '손바닥 사진을 업로드하면 AI가 당신의 운세를 분석합니다.',
-      href: '/palm-reading',
+      description: 'Google Gemini AI가 당신의 손금을 분석하여 운세를 알려드립니다.',
+      href: '/palmistry',
       icon: '✋',
-      isExternal: false
+      isExternal: false,
+      badge: '인기'
     },
     {
       title: '로또 번호 생성기',
@@ -48,7 +60,16 @@ export default function Home() {
       description: '관심 있는 주식의 미래 전망을 AI가 분석해 드립니다.',
       href: '/stock-analyzer',
       icon: '📈',
-      isExternal: false
+      isExternal: false,
+      badge: '개발중'
+    },
+    {
+      title: '웹툰 생성기',
+      description: 'AI가 당신의 아이디어를 웹툰으로 변환해 드립니다.',
+      href: '/webtoon-generator',
+      icon: '🎨',
+      isExternal: false,
+      badge: '개발중'
     }
   ];
 
@@ -99,7 +120,7 @@ export default function Home() {
   ];
 
   // 카드 렌더링 함수
-  const renderCards = (cards, index) => (
+  const renderCards = (cards: CardData, index: number) => (
     <motion.div
       key={cards.title + index}
       initial={{ opacity: 0, y: 20 }}
@@ -132,7 +153,18 @@ export default function Home() {
       ) : (
         <Link href={cards.href} className="block h-full">
           <Card className="h-full border-2 border-gray-100 hover:border-orange-500 transition-all duration-300 shadow-sm hover:shadow-md">
-            <CardHeader>
+            <CardHeader className="relative">
+              {cards.badge && (
+                <div className="absolute top-4 right-4">
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    cards.badge === '인기' 
+                      ? 'bg-orange-100 text-orange-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {cards.badge}
+                  </span>
+                </div>
+              )}
               <div className="text-4xl mb-4">{cards.icon}</div>
               <CardTitle className="text-xl font-bold text-orange-600">{cards.title}</CardTitle>
               <CardDescription className="text-gray-600">{cards.description}</CardDescription>
@@ -164,7 +196,7 @@ export default function Home() {
         </header>
 
         {/* AI 서비스 카테고리 */}
-        <div className="mb-16">
+        <div className="mb-16" id="ai-services">
           <div className="flex items-center mb-6">
             <div className="h-10 w-2 bg-orange-600 rounded-full mr-3"></div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">AI 서비스</h2>
@@ -175,7 +207,7 @@ export default function Home() {
         </div>
 
         {/* GPTS 카테고리 */}
-        <div>
+        <div id="gpts">
           <div className="flex items-center mb-6">
             <div className="h-10 w-2 bg-blue-600 rounded-full mr-3"></div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">GPTS</h2>
