@@ -121,8 +121,8 @@ export default function CalorieCalculator() {
           parts: [
             { text: prompt },
             {
-              inline_data: {
-                mime_type: file.type,
+              inlineData: {
+                mimeType: file.type,
                 data: base64Image
               }
             }
@@ -205,7 +205,7 @@ export default function CalorieCalculator() {
         setResult(jsonData);
       } catch (parseError) {
         console.error('JSON 파싱 에러:', parseError);
-        setError(parseError.message || '분석 결과를 처리하는 중 오류가 발생했습니다.');
+        setError(parseError instanceof Error ? parseError.message : '분석 결과를 처리하는 중 오류가 발생했습니다.');
       }
     } catch (err) {
       console.error('Analysis error:', err);
