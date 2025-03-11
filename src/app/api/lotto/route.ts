@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { WinningNumber } from '@/app/lotto-generator/types';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // 백업 데이터
 const BACKUP_WINNING_NUMBERS: WinningNumber[] = [
@@ -77,6 +78,70 @@ async function getLottoNumbersFromPerplexity(): Promise<WinningNumber[]> {
   } catch (error) {
     console.error('Perplexity API 호출 실패:', error);
     return BACKUP_WINNING_NUMBERS;
+  }
+}
+
+const getApiKey = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Gemini API 키가 설정되지 않았습니다.');
+  }
+  return apiKey;
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    const { category } = await request.json();
+    
+    const genAI = new GoogleGenerativeAI(getApiKey());
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    let prompt = '';
+    switch (category) {
+      case 'frequency':
+        prompt = '최근 로또 당첨 번호에서 자주 등장하는 번호들을 분석하여 6개의 번호를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+        break;
+      case 'pattern':
+        prompt = '최근 로또 당첨 번호들의 패턴(홀짝 비율, 번호 간격 등)을 분석하여 비슷한 패턴의 6개 번호를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+        break;
+      case 'cold':
+        prompt = '최근 로또 당첨 번호에서 오랫동안 등장하지 않은 번호들을 중심으로 6개의 번호를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+        break;
+      case 'prediction':
+        prompt = '로또 당첨 번호의 통계와 패턴을 분석하여 다음 회차에 나올 것 같은 6개의 번호를 예측해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+        break;
+      case 'all':
+        prompt = '모든 분석 방법(출현 빈도, 패턴, 미출현 기간, 예측)을 종합적으로 고려하여 가장 균형 잡힌 6개의 번호를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+        break;
+      default:
+        prompt = '로또 번호 6개를 추천해주세요. 1부터 45까지의 숫자 중에서 선택하되, 중복되지 않게 해주세요.';
+    }
+
+    prompt += '\n\n결과는 다음과 같은 JSON 형식으로 제공해주세요:\n{
+      "numbers": [1, 2, 3, 4, 5, 6],
+      "explanation": "번호 선택 이유에 대한 설명"
+    }';
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data);
+    } catch (error) {
+      console.error('JSON 파싱 에러:', error);
+      return NextResponse.json({
+        numbers: [1, 2, 3, 4, 5, 6],
+        explanation: '번호 생성 중 오류가 발생했습니다.'
+      });
+    }
+  } catch (error) {
+    console.error('API 에러:', error);
+    return NextResponse.json({
+      numbers: [1, 2, 3, 4, 5, 6],
+      explanation: '서버 오류가 발생했습니다.'
+    });
   }
 }
 
