@@ -1,6 +1,6 @@
 export interface RecommendationOption {
   id: string;
-  name: string;
+  title: string;
   description: string;
   icon: string;
 }
@@ -22,4 +22,9 @@ export interface WinningStats {
   leastFrequent: number[];
   recentWinning: WinningNumber[];
   lastUpdated: string;
+}
+
+export interface GeneratedNumbers {
+  numbers: number[][];
+  method: string;
 } 

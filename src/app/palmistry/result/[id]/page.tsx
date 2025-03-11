@@ -16,13 +16,6 @@ import { getPalmistryResult, deletePalmistryResult } from '../../utils/storage';
 import { PalmistryResult } from '../../types';
 import html2canvas from 'html2canvas';
 
-// 카카오톡 타입 정의
-declare global {
-  interface Window {
-    Kakao: any;
-  }
-}
-
 export default function PalmistryResultPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,17 +34,6 @@ export default function PalmistryResultPage() {
       const loadedResult = getPalmistryResult(id);
       setResult(loadedResult);
       setIsLoading(false);
-      
-      // 카카오톡 SDK 초기화
-      if (window.Kakao && !window.Kakao.isInitialized()) {
-        // 카카오톡 JavaScript SDK 키
-        const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY || '';
-        if (kakaoKey) {
-          window.Kakao.init(kakaoKey);
-        } else {
-          console.error('카카오톡 JavaScript SDK 키가 설정되지 않았습니다.');
-        }
-      }
     }
   }, [id]);
 
@@ -75,7 +57,7 @@ export default function PalmistryResultPage() {
   // 카카오톡 공유
   const shareToKakao = () => {
     if (window.Kakao && result) {
-      window.Kakao.Link.sendDefault({
+      window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
           title: 'AI 손금 분석 결과',
@@ -326,7 +308,10 @@ ${result.analysis.fortune}
                 <span className="text-xs text-gray-700">{copied ? '복사됨' : '링크'}</span>
               </button>
               
-              <FacebookShareButton url={shareUrl} quote={shareTitle}>
+              <FacebookShareButton 
+                url={shareUrl} 
+                hashtag="#AI손금분석"
+              >
                 <div className="flex flex-col items-center">
                   <FacebookIcon size={40} round />
                   <span className="text-xs text-gray-700 mt-1">페이스북</span>

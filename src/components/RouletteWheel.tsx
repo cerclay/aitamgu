@@ -19,9 +19,9 @@ const RouletteWheel: React.FC<RouletteWheelProps> = ({
   onSpinEnd
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const currentRotation = useRef(0);
+  const currentRotation = useRef<number>(0);
   const startTime = useRef<number | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current;

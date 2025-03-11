@@ -42,7 +42,7 @@ export default function Home() {
     },
     {
       title: '손금 분석기',
-      description: 'Google Gemini AI가 당신의 손금을 분석하여 운세를 알려드립니다.',
+      description: 'AI가 당신의 손금을 분석하여 운세를 알려드립니다.',
       href: '/palmistry',
       icon: '✋',
       isExternal: false,

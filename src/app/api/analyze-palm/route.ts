@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini API 키 (환경 변수에서 가져오거나 기본값 사용)
-// 실제 프로덕션에서는 환경 변수를 사용해야 합니다
-const API_KEY = process.env.GEMINI_API_KEY || 'YOUR_API_KEY_HERE';
-
-// API 키가 설정되어 있는지 확인
-if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
-  console.error('Gemini API 키가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 설정하세요.');
-}
-
-// Gemini 모델 초기화
-const genAI = new GoogleGenerativeAI(API_KEY);
+// API 키를 가져오는 함수
+const getApiKey = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error('Gemini API 키가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 설정하세요.');
+    return '';
+  }
+  return apiKey;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,12 +23,16 @@ export async function POST(request: NextRequest) {
     }
     
     // API 키 확인
-    if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
+    const API_KEY = getApiKey();
+    if (!API_KEY) {
       return NextResponse.json(
         { error: 'Gemini API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.' },
         { status: 500 }
       );
     }
+    
+    // Gemini 모델 초기화
+    const genAI = new GoogleGenerativeAI(API_KEY);
     
     // Base64 이미지 데이터 추출 (data:image/jpeg;base64, 부분 제거)
     const base64Data = image.split(',')[1];
