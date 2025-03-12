@@ -18,6 +18,14 @@ export default function Home() {
   // AI 서비스 카테고리 카드
   const aiServiceCards = [
     {
+      title: '유튜브 영상 요약',
+      description: '유튜브 영상의 내용을 AI가 요약해 핵심만 빠르게 파악하세요.',
+      href: '/youtube-insight',
+      icon: '📺',
+      isExternal: false,
+      badge: '신규'
+    },
+    {
       title: '음식 칼로리 측정기',
       description: '음식 사진을 업로드하면 AI가 칼로리를 측정해 드립니다.',
       href: '/calorie-calculator',

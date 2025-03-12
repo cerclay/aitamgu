@@ -120,16 +120,16 @@ export default function CalorieCalculator() {
           role: 'user',
           parts: [
             { text: prompt },
-            {
-              inlineData: {
+        {
+          inlineData: {
                 mimeType: file.type,
-                data: base64Image
-              }
-            }
+            data: base64Image
+          }
+        }
           ]
         }]
       });
-
+      
       const response = await result.response;
       const text = response.text();
       
@@ -139,7 +139,7 @@ export default function CalorieCalculator() {
         
         // 방법 1: 정규식으로 중괄호로 둘러싸인 부분 추출
         const jsonMatch = text.match(/{[\s\S]*}/);
-        if (jsonMatch) {
+      if (jsonMatch) {
           try {
             jsonData = JSON.parse(jsonMatch[0]);
           } catch (e) {
@@ -304,7 +304,7 @@ export default function CalorieCalculator() {
           >
             <ArrowLeft className="w-5 h-5 mr-1" />
             <span>홈으로</span>
-          </Link>
+        </Link>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             AI 칼로리 계산기
           </h1>
@@ -369,14 +369,14 @@ export default function CalorieCalculator() {
               <label className="flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 rounded-xl cursor-pointer hover:from-gray-100 hover:to-gray-200 transition-all transform hover:scale-[1.02] hover:shadow-md">
                 <Upload className="w-5 h-5" />
                 <span className="font-medium">갤러리에서 선택하기</span>
-                <input
-                  type="file"
+                <input 
+                  type="file" 
                   accept="image/*"
-                  className="hidden"
+                  className="hidden" 
                   onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
                 />
               </label>
-            </div>
+              </div>
           ) : (
             <div className="relative group">
               <img
@@ -397,8 +397,8 @@ export default function CalorieCalculator() {
               </button>
             </div>
           )}
-        </div>
-
+              </div>
+              
         {/* 로딩 상태 */}
         {loading && (
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6">
@@ -408,10 +408,10 @@ export default function CalorieCalculator() {
                 <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-t-4 border-indigo-600 animate-spin"></div>
               </div>
               <p className="text-gray-600 mt-4 animate-pulse">AI가 음식을 분석하고 있습니다...</p>
+              </div>
             </div>
-          </div>
-        )}
-
+          )}
+          
         {/* 에러 메시지 */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start">
@@ -426,8 +426,8 @@ export default function CalorieCalculator() {
                 • 다른 각도에서 촬영해보세요<br />
                 • 조명이 밝은 환경에서 촬영해보세요
               </p>
-            </div>
-          </div>
+                </div>
+              </div>
         )}
 
         {/* 분석 결과 */}
@@ -447,11 +447,11 @@ export default function CalorieCalculator() {
               <div className="bg-green-50 rounded-xl p-4">
                 <div className="text-sm text-gray-600">탄수화물</div>
                 <div className="text-2xl font-bold text-green-600">{result.nutrients.carbs}g</div>
-              </div>
+                    </div>
               <div className="bg-blue-50 rounded-xl p-4">
                 <div className="text-sm text-gray-600">단백질</div>
                 <div className="text-2xl font-bold text-blue-600">{result.nutrients.protein}g</div>
-              </div>
+                  </div>
               <div className="bg-yellow-50 rounded-xl p-4">
                 <div className="text-sm text-gray-600">지방</div>
                 <div className="text-2xl font-bold text-yellow-600">{result.nutrients.fat}g</div>
@@ -469,14 +469,14 @@ export default function CalorieCalculator() {
                 <div>
                   <span className="text-gray-600">식이섬유</span>
                   <span className="float-right font-medium">{result.nutrients.fiber}g</span>
-                </div>
+                    </div>
                 <div>
                   <span className="text-gray-600">나트륨</span>
                   <span className="float-right font-medium">{result.nutrients.sodium}mg</span>
-                </div>
-              </div>
-            </div>
-
+                      </div>
+                    </div>
+                  </div>
+                  
             {/* 건강 정보 */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">건강 정보</h3>
@@ -491,7 +491,7 @@ export default function CalorieCalculator() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                      </div>
                 <div className="bg-amber-50 rounded-xl p-4">
                   <h4 className="text-sm font-medium text-amber-800 mb-2">섭취 시 주의사항</h4>
                   <ul className="space-y-2">
@@ -502,10 +502,10 @@ export default function CalorieCalculator() {
                       </li>
                     ))}
                   </ul>
-                </div>
-              </div>
-            </div>
-
+                      </div>
+                    </div>
+                  </div>
+                  
             {/* 섭취 시간 */}
             <div className="bg-indigo-50 rounded-xl p-4 mb-6">
               <h3 className="text-sm font-medium text-indigo-900 mb-2">최적 섭취 시간</h3>
@@ -517,48 +517,48 @@ export default function CalorieCalculator() {
                   </li>
                 ))}
               </ul>
-            </div>
-
+                  </div>
+                  
             {/* 맞춤 추천 */}
             <div className="space-y-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900">맞춤 추천</h3>
               <div className="bg-blue-50 rounded-xl p-4">
                 <h4 className="text-sm font-medium text-blue-800 mb-2">고혈당자 추천</h4>
                 <p className="text-gray-600">{result.recommendations.highBloodSugar}</p>
-              </div>
+                  </div>
               <div className="bg-purple-50 rounded-xl p-4">
                 <h4 className="text-sm font-medium text-purple-800 mb-2">고혈압자 추천</h4>
                 <p className="text-gray-600">{result.recommendations.highBloodPressure}</p>
-              </div>
+                        </div>
               <div className="bg-pink-50 rounded-xl p-4">
                 <h4 className="text-sm font-medium text-pink-800 mb-2">다이어트 추천</h4>
                 <p className="text-gray-600">{result.recommendations.diet}</p>
-              </div>
+                      </div>
               <div className="bg-emerald-50 rounded-xl p-4">
                 <h4 className="text-sm font-medium text-emerald-800 mb-2">건강식 추천</h4>
                 <p className="text-gray-600">{result.recommendations.healthy}</p>
+                </div>
               </div>
-            </div>
-
-            {/* 공유 버튼 */}
+              
+              {/* 공유 버튼 */}
             <div className="flex gap-4">
-              <button
+                      <button 
                 onClick={handleShare}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
-              >
+                      >
                 <Share2 className="w-5 h-5" />
                 <span>공유하기</span>
-              </button>
-              <button
+                      </button>
+                      <button 
                 onClick={handleDownload}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
               >
                 <Download className="w-5 h-5" />
                 <span>저장하기</span>
-              </button>
+                      </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );
