@@ -95,18 +95,19 @@ async function analyzePillWithGemini(imageBytes: ArrayBuffer): Promise<{
       알약이 아닌 것이 확실한 경우에만 null을 반환해주세요.
     `;
     
-    // Gemini API 호출 - 최신 버전 호환성을 위해 수정
-    const imageContent = {
-      mimeType: 'image/jpeg',
-      data: imageData
-    };
+    // 이미지를 Base64로 인코딩
+    const base64Image = Buffer.from(imageData).toString('base64');
     
-    // 최신 API 형식으로 호출
-    const result = await model.generateContent({
-      contents: [
-        { role: 'user', parts: [{ text: prompt }, { inlineData: imageContent }] }
-      ]
-    });
+    // Gemini API 호출 (0.1.3 버전 호환)
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64Image
+        }
+      }
+    ]);
     
     const response = await result.response;
     const text = response.text();
