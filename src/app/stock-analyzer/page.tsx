@@ -84,7 +84,7 @@ export default function StockAnalyzer() {
           미국 주식 AI 분석기
         </h1>
         <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-          AI를 활용한 주식 분석 및 예측 서비스. Yahoo Finance 데이터를 기반으로 미래 가격 흐름을 예측합니다.
+          AI를 활용한 주식 분석 및 예측 서비스. 현재 정보를 취합하여 미래 가격 흐름을 예측합니다.
         </p>
       </div>
 

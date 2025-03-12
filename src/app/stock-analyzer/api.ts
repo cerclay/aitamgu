@@ -2,105 +2,82 @@
 
 import { StockData, EconomicIndicator, PredictionResult, YahooFinanceResponse, FredApiResponse } from './types';
 import yahooFinance from 'yahoo-finance2';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Yahoo Finance API 키
 const YAHOO_FINANCE_API_KEY = process.env.NEXT_PUBLIC_YAHOO_FINANCE_API_KEY;
 
+// 간단한 메모리 캐시
+const cache: Record<string, { data: any, timestamp: number }> = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5분
+
 // 주식 데이터 가져오기
-export async function fetchStockData(ticker: string): Promise<StockData> {
+export const fetchStockData = async (symbol: string): Promise<StockData> => {
   try {
-    // 서버 측 프록시 API를 통해 데이터 가져오기
-    const [quoteResponse, profileResponse, summaryResponse] = await Promise.all([
-      fetch(`/api/yahoo-finance?symbol=${ticker}`).then(res => res.json()),
-      fetch(`/api/yahoo-finance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: ticker, modules: ['assetProfile'] })
-      }).then(res => res.json()),
-      fetch(`/api/yahoo-finance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          symbol: ticker, 
-          modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail', 'price'] 
-        })
-      }).then(res => res.json())
-    ]);
-
-    // 과거 주가 데이터 가져오기
-    const oneYearAgo = Math.floor(getOneYearAgo().getTime() / 1000);
-    const now = Math.floor(Date.now() / 1000);
-    const historyResponse = await fetch(`/api/yahoo-finance/historical?symbol=${ticker}&period1=${oneYearAgo}&period2=${now}&interval=1d`)
-      .then(res => res.json());
-
-    // API 응답 데이터 추출
-    const quote = quoteResponse.chart?.result?.[0]?.meta || {};
-    const profile = profileResponse.quoteSummary?.result?.[0] || {};
-    const summary = summaryResponse.quoteSummary?.result?.[0] || {};
-    
-    // 과거 주가 데이터 변환
-    const historicalPrices = historyResponse.map((item: any) => ({
-      date: item.Date,
-      price: item.Close,
-    }));
-
-    // 기술적 지표 계산
-    const rsi = calculateRSI(historicalPrices);
-    const { ma50, ma200 } = calculateMovingAverages(historicalPrices);
-    const { bollingerUpper, bollingerLower } = calculateBollingerBands(historicalPrices);
-    const macd = calculateMACD(historicalPrices);
-
-    // 주가 변화율 계산
-    const currentPrice = quote.regularMarketPrice || 0;
-    const previousClose = quote.previousClose || 0;
-    const priceChange = ((currentPrice - previousClose) / previousClose) * 100;
-
-    console.log('API 응답 데이터:', { quoteResponse, profileResponse, summaryResponse, historyResponse });
-
-    // 실제 API 데이터로 StockData 객체 생성
-    return {
-      ticker,
-      companyName: quote.longName || quote.shortName || ticker,
-      currentPrice: currentPrice,
-      priceChange: priceChange,
-      marketCap: quote.marketCap || 0,
-      volume: quote.regularMarketVolume || 0,
-      high52Week: quote.fiftyTwoWeekHigh || 0,
-      low52Week: quote.fiftyTwoWeekLow || 0,
-      lastUpdated: new Date().toISOString(),
-      description: profile.assetProfile?.longBusinessSummary || `${ticker}는 미국 주식 시장에 상장된 기업입니다.`,
-      historicalPrices,
-      technicalIndicators: {
-        rsi,
-        macd,
-        bollingerUpper,
-        bollingerLower,
-        ma50,
-        ma200,
-      },
-      fundamentals: {
-        pe: summary.summaryDetail?.trailingPE?.raw || 0,
-        eps: summary.defaultKeyStatistics?.trailingEps?.raw || 0,
-        dividendYield: (summary.summaryDetail?.dividendYield?.raw || 0) * 100, // 백분율로 변환
-        peg: summary.defaultKeyStatistics?.pegRatio?.raw || 0,
-        roe: summary.financialData?.returnOnEquity?.raw ? summary.financialData.returnOnEquity.raw * 100 : 0, // 백분율로 변환
-        debtToEquity: summary.financialData?.debtToEquity?.raw || 0,
-        revenue: summary.financialData?.totalRevenue?.raw || 0,
-        revenueGrowth: summary.financialData?.revenueGrowth?.raw ? summary.financialData.revenueGrowth.raw * 100 : 0, // 백분율로 변환
-        netIncome: summary.financialData?.netIncomeToCommon?.raw || 0,
-        netIncomeGrowth: 0, // API에서 직접 제공하지 않는 값
-        operatingMargin: summary.financialData?.operatingMargins?.raw ? summary.financialData.operatingMargins.raw * 100 : 0, // 백분율로 변환
-        nextEarningsDate: quote.earningsTimestamp ? new Date(quote.earningsTimestamp * 1000).toISOString().split('T')[0] : "",
-      },
-      patterns: generateRandomPatterns(), // 차트 패턴은 여전히 목업 데이터 사용
-    };
+    const response = await fetch(`/api/yahoo-finance?symbol=${symbol}`);
+    if (!response.ok) {
+      throw new Error('주식 데이터를 가져오는데 실패했습니다.');
+    }
+    return await response.json();
   } catch (error) {
     console.error('주식 데이터 가져오기 실패:', error);
-    
-    // API 호출 실패 시 목업 데이터로 폴백
-    console.log('목업 데이터로 대체합니다.');
-    return generateMockStockData(ticker);
+    return generateMockStockData(symbol);
   }
+};
+
+// 과거 주가 데이터 생성 (목업)
+function generateMockHistoricalPrices(currentPrice: number): { date: string; price: number }[] {
+  const historicalPrices = [];
+  const today = new Date();
+  let price = currentPrice;
+  
+  for (let i = 365; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    
+    // 약간의 랜덤 변동 추가
+    price = price * (0.98 + Math.random() * 0.04);
+    
+    historicalPrices.push({
+      date: date.toISOString().split('T')[0],
+      price: parseFloat(price.toFixed(2)),
+    });
+  }
+  
+  return historicalPrices;
+}
+
+// 기술적 지표 계산
+function calculateTechnicalIndicators(prices: { date: string; price: number }[]): {
+  rsi: number;
+  macd: number;
+  bollingerUpper: number;
+  bollingerLower: number;
+  ma50: number;
+  ma200: number;
+} {
+  const priceValues = prices.map(item => item.price);
+  
+  // RSI 계산
+  const rsi = calculateRSI(prices);
+  
+  // 이동평균 계산
+  const { ma50, ma200 } = calculateMovingAverages(prices);
+  
+  // 볼린저 밴드 계산
+  const { bollingerUpper, bollingerLower } = calculateBollingerBands(prices);
+  
+  // MACD 계산
+  const macd = calculateMACD(prices);
+  
+  return {
+    rsi,
+    macd,
+    bollingerUpper,
+    bollingerLower,
+    ma50,
+    ma200,
+  };
 }
 
 // 1년 전 날짜 가져오기
@@ -271,6 +248,97 @@ export async function fetchEconomicIndicators(): Promise<EconomicIndicator[]> {
     console.error('경제 지표 데이터 가져오기 실패:', error);
     return generateMockEconomicIndicators();
   }
+}
+
+// FRED API를 사용하여 경제 지표 데이터 가져오기
+export async function fetchEconomicIndicatorsFromFRED(): Promise<EconomicIndicator[]> {
+  try {
+    // 주요 경제 지표 ID 목록
+    const indicators = [
+      'gdp',
+      'unemployment',
+      'inflation',
+      'interest_rate',
+      'treasury_10y',
+      'consumer_sentiment'
+    ];
+    
+    // 서버 측 API 호출
+    const response = await fetch('/api/fred', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ indicators }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('FRED API 호출 실패');
+    }
+    
+    const data = await response.json();
+    
+    // 응답 데이터를 EconomicIndicator 형식으로 변환
+    return transformFREDData(data, indicators);
+  } catch (error) {
+    console.error('경제 지표 데이터 가져오기 실패:', error);
+    return generateMockEconomicIndicators();
+  }
+}
+
+// FRED API 응답 데이터를 EconomicIndicator 형식으로 변환
+function transformFREDData(data: any, indicators: string[]): EconomicIndicator[] {
+  const result: EconomicIndicator[] = [];
+  
+  // 지표 이름 매핑
+  const indicatorNames: Record<string, string> = {
+    'gdp': '미국 GDP 성장률',
+    'unemployment': '미국 실업률',
+    'inflation': '미국 소비자물가지수',
+    'interest_rate': '미국 기준금리',
+    'treasury_10y': '미국 10년 국채 수익률',
+    'consumer_sentiment': '소비자 심리지수'
+  };
+  
+  // 단위 매핑
+  const indicatorUnits: Record<string, string> = {
+    'gdp': '%',
+    'unemployment': '%',
+    'inflation': '%',
+    'interest_rate': '%',
+    'treasury_10y': '%',
+    'consumer_sentiment': ''
+  };
+  
+  // 각 지표에 대해 처리
+  indicators.forEach(indicator => {
+    if (data[indicator] && data[indicator].observations && data[indicator].observations.length > 0) {
+      const observations = data[indicator].observations;
+      
+      // 최신 값과 이전 값 가져오기
+      const latestValue = parseFloat(observations[0].value);
+      const previousValue = observations.length > 1 ? parseFloat(observations[1].value) : latestValue;
+      
+      // 변화량 계산
+      const change = latestValue - previousValue;
+      
+      result.push({
+        name: indicatorNames[indicator] || indicator,
+        value: latestValue,
+        unit: indicatorUnits[indicator] || '',
+        change,
+        previousPeriod: '전월',
+        source: 'FRED'
+      });
+    }
+  });
+  
+  // 데이터가 없는 경우 목업 데이터 반환
+  if (result.length === 0) {
+    return generateMockEconomicIndicators();
+  }
+  
+  return result;
 }
 
 // AI 예측 생성
@@ -895,4 +963,56 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     risks,
     recommendation,
   };
+}
+
+// Gemini API를 사용하여 주식 분석 수행
+export async function analyzeStockWithGemini(
+  stockData: StockData,
+  economicData: EconomicIndicator[],
+  analysisType: string = 'comprehensive'
+): Promise<any> {
+  try {
+    // 서버 측 API 호출
+    const response = await fetch('/api/analyze-stock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        stockData,
+        economicData,
+        analysisType
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('분석 API 호출 실패');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('주식 분석 실패:', error);
+    return {
+      analysis: '분석 중 오류가 발생했습니다. 나중에 다시 시도해주세요.',
+      analysisType,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const symbol = searchParams.get('symbol');
+  
+  if (!symbol) {
+    return NextResponse.json({ error: '주식 심볼이 필요합니다' }, { status: 400 });
+  }
+  
+  try {
+    const stockData = await fetchStockData(symbol);
+    return NextResponse.json(stockData);
+  } catch (error) {
+    console.error('주식 데이터 가져오기 실패:', error);
+    return NextResponse.json({ error: '데이터를 가져오는 중 오류가 발생했습니다' }, { status: 500 });
+  }
 } 

@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Sparkles, Flame, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
 
@@ -45,8 +48,7 @@ export default function Home() {
       description: '위치, 날씨, 기분에 맞는 점심 메뉴를 추천해 드립니다.',
       href: '/lunch-recommendation',
       icon: '🍲',
-      isExternal: false,
-      badge: '개발중'
+      isExternal: false
     },
     {
       title: '손금 분석기',
@@ -61,7 +63,8 @@ export default function Home() {
       description: '당신의 운세에 맞는 로또 번호를 AI가 추천해 드립니다.',
       href: '/lotto-generator',
       icon: '🎱',
-      isExternal: false
+      isExternal: false,
+      badge: '신규'
     },
     {
       title: '주식 분석기',
@@ -69,7 +72,7 @@ export default function Home() {
       href: '/stock-analyzer',
       icon: '📈',
       isExternal: false,
-      badge: '개발중'
+      badge: '인기'
     },
     {
       title: '웹툰 생성기',
@@ -78,6 +81,14 @@ export default function Home() {
       icon: '🎨',
       isExternal: false,
       badge: '개발중'
+    },
+    {
+      title: '알약 카메라',
+      description: '알약 이미지로 약품 정보 확인',
+      href: '/pill-camera',
+      icon: '💊',
+      isExternal: false,
+      badge: '신규'
     }
   ];
 
@@ -164,13 +175,26 @@ export default function Home() {
             <CardHeader className="relative">
               {cards.badge && (
                 <div className="absolute top-4 right-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    cards.badge === '인기' 
-                      ? 'bg-orange-100 text-orange-700' 
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {cards.badge}
-                  </span>
+                  {cards.badge === '인기' ? (
+                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
+                      <Flame className="h-4 w-4 mr-1 animate-pulse" />
+                      인기
+                    </Badge>
+                  ) : cards.badge === '신규' ? (
+                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
+                      <Sparkles className="h-4 w-4 mr-1 animate-pulse" />
+                      신규
+                    </Badge>
+                  ) : cards.badge === '개발중' ? (
+                    <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
+                      <Star className="h-4 w-4 mr-1 animate-pulse" />
+                      개발중
+                    </Badge>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                      {cards.badge}
+                    </span>
+                  )}
                 </div>
               )}
               <div className="text-4xl mb-4">{cards.icon}</div>
@@ -192,39 +216,29 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-12">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-orange-600">
-            Ai 탐구생활
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            인공지능으로 일상의 다양한 문제를 해결하고 새로운 경험을 만들어보세요.
+    <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24">
+      <div className="z-10 max-w-5xl w-full items-center justify-between text-sm">
+        <section className="mb-16">
+          <h1 className="text-4xl font-bold mb-4">AI 탐구생활</h1>
+          <p className="text-xl text-gray-600 mb-8">
+            AI로 더 나은 삶을 만들어가는 공간
           </p>
-        </header>
+        </section>
 
-        {/* AI 서비스 카테고리 */}
-        <div className="mb-16" id="ai-services">
-          <div className="flex items-center mb-6">
-            <div className="h-10 w-2 bg-orange-600 rounded-full mr-3"></div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">AI 서비스</h2>
-          </div>
+        <section id="ai-services" className="mb-16">
+          <h2 className="text-2xl font-bold mb-6">AI 서비스</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {aiServiceCards.map((card, index) => renderCards(card, index))}
           </div>
-        </div>
+        </section>
 
-        {/* GPTS 카테고리 */}
-        <div id="gpts">
-          <div className="flex items-center mb-6">
-            <div className="h-10 w-2 bg-blue-600 rounded-full mr-3"></div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">GPTS</h2>
-          </div>
+        <section id="gpts" className="mb-16">
+          <h2 className="text-2xl font-bold mb-6">GPTs</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {gptsCards.map((card, index) => renderCards(card, index))}
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

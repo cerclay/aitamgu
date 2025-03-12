@@ -5,6 +5,7 @@ import Providers from './providers';
 import Script from 'next/script';
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/header';
+import Link from 'next/link';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -42,8 +43,8 @@ export default function RootLayout({
         <Providers>
           <Header />
           {children}
+          <Toaster />
         </Providers>
-        <Toaster />
       </body>
     </html>
   );
