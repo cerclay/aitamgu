@@ -47,27 +47,34 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
     }
 
     // 이미지 품질 확인을 위한 추가 검사
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    
-    img.onload = () => {
-      // 이미지 크기가 너무 작은 경우
-      if (img.width < 200 || img.height < 200) {
-        setError('이미지 해상도가 너무 낮습니다. 더 선명한 이미지를 사용해주세요.');
-        URL.revokeObjectURL(objectUrl);
-        return;
-      }
+    // 브라우저 환경에서만 실행
+    if (typeof window !== 'undefined') {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       
+      img.onload = () => {
+        // 이미지 크기가 너무 작은 경우
+        if (img.width < 200 || img.height < 200) {
+          setError('이미지 해상도가 너무 낮습니다. 더 선명한 이미지를 사용해주세요.');
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        
+        setError(null);
+        setPreviewUrl(objectUrl);
+      };
+      
+      img.onerror = () => {
+        setError('이미지를 로드할 수 없습니다. 다른 이미지를 시도해주세요.');
+        URL.revokeObjectURL(objectUrl);
+      };
+      
+      img.src = objectUrl;
+    } else {
+      // 서버 사이드 렌더링 환경에서는 간단히 처리
       setError(null);
-      setPreviewUrl(objectUrl);
-    };
-    
-    img.onerror = () => {
-      setError('이미지를 로드할 수 없습니다. 다른 이미지를 시도해주세요.');
-      URL.revokeObjectURL(objectUrl);
-    };
-    
-    img.src = objectUrl;
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
