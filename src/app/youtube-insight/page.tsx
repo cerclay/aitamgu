@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { ArrowLeft, Clock, Share2, Download, Bookmark, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import YouTubeUrlForm from './components/YouTubeUrlForm';
-import VideoSummary from './components/VideoSummary';
-import LoadingState from './components/LoadingState';
-import ErrorDisplay from './components/ErrorDisplay';
+import { extractVideoId, fetchVideoInfo, formatDuration, formatViewCount, formatPublishedDate } from './api';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 
 interface SummaryResult {
   title: string;
@@ -22,9 +23,6 @@ interface SummaryResult {
   }[];
 }
 
-// YouTube API 키
-const YOUTUBE_API_KEY = 'AIzaSyDiyeeFnh1ewkDcSg_7jceQ23JHxBOaxhs'; // 실제 프로젝트에서는 환경 변수로 관리해야 합니다
-
 export default function YouTubeInsight() {
   const [url, setUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -32,80 +30,17 @@ export default function YouTubeInsight() {
   const [result, setResult] = useState<SummaryResult | null>(null);
   const [summaryLength, setSummaryLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [language, setLanguage] = useState<string>('한국어');
+  const { toast } = useToast();
 
-  // YouTube 영상 ID 추출 함수
-  const extractVideoId = (youtubeUrl: string): string | null => {
-    let videoId = null;
-    
-    try {
-      // youtube.com/watch?v=VIDEO_ID 형식
-      if (youtubeUrl.includes('youtube.com/watch')) {
-        const urlObj = new URL(youtubeUrl);
-        videoId = urlObj.searchParams.get('v');
-      } 
-      // youtu.be/VIDEO_ID 형식
-      else if (youtubeUrl.includes('youtu.be')) {
-        const urlParts = youtubeUrl.split('/');
-        videoId = urlParts[urlParts.length - 1].split('?')[0];
-      }
-    } catch (error) {
-      console.error('URL 파싱 오류:', error);
-    }
-    
-    return videoId;
-  };
-
-  // YouTube API를 통해 영상 정보 가져오기
-  const fetchVideoInfo = async (videoId: string) => {
-    try {
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('YouTube API 요청 실패');
-      }
-      
-      const data = await response.json();
-      
-      if (!data.items || data.items.length === 0) {
-        throw new Error('영상 정보를 찾을 수 없습니다');
-      }
-      
-      const videoInfo = data.items[0];
-      const snippet = videoInfo.snippet;
-      const statistics = videoInfo.statistics;
-      
-      return {
-        title: snippet.title,
-        channelName: snippet.channelTitle,
-        uploadDate: new Date(snippet.publishedAt).toLocaleDateString(),
-        viewCount: parseInt(statistics.viewCount).toLocaleString() + '회',
-        description: snippet.description
-      };
-    } catch (error) {
-      console.error('YouTube API 오류:', error);
-      throw error;
-    }
-  };
-
-  // 자막 가져오기 (실제로는 YouTube API의 captions 엔드포인트를 사용해야 함)
-  // 현재는 Gemini API로 대체
-  const fetchTranscript = async (videoId: string) => {
-    // 실제 구현에서는 YouTube API의 captions 엔드포인트를 사용
-    // 현재는 더미 데이터 반환
-    return "영상의 자막을 가져올 수 없습니다. Gemini API를 통해 영상을 분석합니다.";
-  };
-
-  const handleUrlSubmit = async (youtubeUrl: string) => {
-    if (!youtubeUrl) {
+  const handleUrlSubmit = async () => {
+    if (!url) {
       setError('YouTube URL을 입력해주세요.');
       return;
     }
 
     // YouTube URL 유효성 검사
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
-    if (!youtubeRegex.test(youtubeUrl)) {
+    if (!youtubeRegex.test(url)) {
       setError('유효한 YouTube URL이 아닙니다.');
       return;
     }
@@ -113,11 +48,10 @@ export default function YouTubeInsight() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setUrl(youtubeUrl);
 
     try {
       // YouTube 영상 ID 추출
-      const videoId = extractVideoId(youtubeUrl);
+      const videoId = extractVideoId(url);
       
       if (!videoId) {
         throw new Error('YouTube 영상 ID를 추출할 수 없습니다.');
@@ -126,11 +60,8 @@ export default function YouTubeInsight() {
       // YouTube API를 통해 영상 정보 가져오기
       const videoInfo = await fetchVideoInfo(videoId);
       
-      // 자막 가져오기 (실제로는 YouTube API의 captions 엔드포인트를 사용해야 함)
-      const transcript = await fetchTranscript(videoId);
-
       // Gemini API를 사용하여 영상 요약
-      const genAI = new GoogleGenerativeAI('AIzaSyDiyeeFnh1ewkDcSg_7jceQ23JHxBOaxhs');
+      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
       const summaryLengthText = 
@@ -138,13 +69,13 @@ export default function YouTubeInsight() {
         summaryLength === 'medium' ? '보통 길이로 (5-7문장)' : 
         '상세하게 (8-10문장)';
 
-      const prompt = `다음 YouTube 영상을 요약해주세요: ${youtubeUrl}
+      const prompt = `다음 YouTube 영상을 요약해주세요: ${url}
       
-영상 제목: ${videoInfo.title}
-채널명: ${videoInfo.channelName}
-업로드 날짜: ${videoInfo.uploadDate}
-조회수: ${videoInfo.viewCount}
-영상 설명: ${videoInfo.description}
+영상 제목: ${videoInfo.snippet.title}
+채널명: ${videoInfo.snippet.channelTitle}
+업로드 날짜: ${formatPublishedDate(videoInfo.snippet.publishedAt)}
+조회수: ${formatViewCount(videoInfo.statistics.viewCount)}회
+영상 설명: ${videoInfo.snippet.description}
 
 위 정보를 바탕으로 ${language}로 다음 정보를 JSON 형식으로 제공해주세요:
 
@@ -186,16 +117,20 @@ export default function YouTubeInsight() {
         
         // 최종 결과 생성
         const finalResult: SummaryResult = {
-          title: videoInfo.title,
-          channelName: videoInfo.channelName,
-          uploadDate: videoInfo.uploadDate,
-          viewCount: videoInfo.viewCount,
+          title: videoInfo.snippet.title,
+          channelName: videoInfo.snippet.channelTitle,
+          uploadDate: formatPublishedDate(videoInfo.snippet.publishedAt),
+          viewCount: formatViewCount(videoInfo.statistics.viewCount) + '회',
           summary: jsonData.summary,
           keyPoints: jsonData.keyPoints || [],
           timestamps: jsonData.timestamps || []
         };
         
         setResult(finalResult);
+        toast({
+          title: '요약 완료',
+          description: '영상 요약이 완료되었습니다.',
+        });
       } catch (parseError) {
         console.error('JSON 파싱 에러:', parseError);
         setError(parseError instanceof Error ? parseError.message : '응답 데이터를 처리하는 중 오류가 발생했습니다.');
@@ -203,6 +138,11 @@ export default function YouTubeInsight() {
     } catch (err) {
       console.error('요약 생성 오류:', err);
       setError(err instanceof Error ? err.message : '영상 요약 중 오류가 발생했습니다. 다시 시도해주세요.');
+      toast({
+        title: '오류 발생',
+        description: '영상 요약 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -237,23 +177,175 @@ export default function YouTubeInsight() {
             긴 영상도 핵심만 빠르게 파악하세요!
           </p>
           
-          <YouTubeUrlForm 
-            onSubmit={handleUrlSubmit} 
-            summaryLength={summaryLength}
-            onSummaryLengthChange={setSummaryLength}
-            language={language}
-            onLanguageChange={setLanguage}
-          />
+          <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="youtube-url" className="text-sm font-medium text-gray-700">
+                YouTube URL
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="youtube-url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleUrlSubmit}
+                  disabled={loading}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  {loading ? '요약 중...' : '요약하기'}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm font-medium text-gray-700">요약 길이</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={summaryLength === 'short' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSummaryLength('short')}
+                  >
+                    짧게
+                  </Button>
+                  <Button
+                    variant={summaryLength === 'medium' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSummaryLength('medium')}
+                  >
+                    보통
+                  </Button>
+                  <Button
+                    variant={summaryLength === 'long' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSummaryLength('long')}
+                  >
+                    길게
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm font-medium text-gray-700">언어</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={language === '한국어' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setLanguage('한국어')}
+                  >
+                    한국어
+                  </Button>
+                  <Button
+                    variant={language === '영어' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setLanguage('영어')}
+                  >
+                    영어
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 로딩 상태 */}
-        {loading && <LoadingState />}
+        {loading && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-12 h-12 border-4 border-gray-200 border-t-red-500 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600">영상을 분석하고 요약하는 중입니다...</p>
+              <p className="text-sm text-gray-500 mt-2">잠시만 기다려주세요.</p>
+            </div>
+          </div>
+        )}
 
         {/* 에러 메시지 */}
-        {error && <ErrorDisplay message={error} />}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">오류가 발생했습니다</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 결과 표시 */}
-        {result && !loading && <VideoSummary result={result} videoUrl={url} />}
+        {result && !loading && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl">{result.title}</CardTitle>
+                    <CardDescription>{result.channelName} • {result.uploadDate} • {result.viewCount}</CardDescription>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="icon" title="공유하기">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" title="저장하기">
+                      <Bookmark className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" title="복사하기">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">요약</h3>
+                  <p className="text-gray-700">{result.summary}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">주요 포인트</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {result.keyPoints.map((point, index) => (
+                      <li key={index} className="text-gray-700">{point}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {result.timestamps.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">타임스탬프</h3>
+                    <div className="space-y-2">
+                      {result.timestamps.map((timestamp, index) => (
+                        <div key={index} className="flex">
+                          <div className="bg-gray-100 text-gray-700 font-mono px-2 py-1 rounded mr-3 w-16 text-center">
+                            {timestamp.time}
+                          </div>
+                          <div className="text-gray-700">{timestamp.content}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  className="w-full bg-red-500 hover:bg-red-600"
+                  onClick={() => window.open(url, '_blank')}
+                >
+                  YouTube에서 영상 보기
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

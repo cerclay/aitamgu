@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Share2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface NumberDisplayProps {
   numbers: number[];
@@ -11,13 +11,26 @@ interface NumberDisplayProps {
 
 export default function NumberDisplay({ numbers, label }: NumberDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const [visibleNumbers, setVisibleNumbers] = useState<number[]>([]);
+
+  // 번호를 순차적으로 표시하는 효과
+  useEffect(() => {
+    setVisibleNumbers([]);
+    const showNumbersSequentially = async () => {
+      for (let i = 0; i < numbers.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setVisibleNumbers(prev => [...prev, numbers[i]]);
+      }
+    };
+    showNumbersSequentially();
+  }, [numbers]);
 
   const getNumberColor = (number: number) => {
-    if (number <= 10) return 'bg-yellow-500 text-yellow-900';
-    if (number <= 20) return 'bg-blue-500 text-white';
-    if (number <= 30) return 'bg-red-500 text-white';
-    if (number <= 40) return 'bg-gray-600 text-white';
-    return 'bg-green-500 text-white';
+    if (number <= 10) return 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-yellow-900';
+    if (number <= 20) return 'bg-gradient-to-br from-blue-400 to-blue-600 text-white';
+    if (number <= 30) return 'bg-gradient-to-br from-red-400 to-red-600 text-white';
+    if (number <= 40) return 'bg-gradient-to-br from-gray-500 to-gray-700 text-white';
+    return 'bg-gradient-to-br from-green-400 to-green-600 text-white';
   };
 
   const handleCopy = () => {
@@ -47,46 +60,74 @@ export default function NumberDisplay({ numbers, label }: NumberDisplayProps) {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="bg-white p-4 rounded-lg shadow-sm border border-gray-100"
+      transition={{ duration: 0.5 }}
+      className="bg-white p-5 rounded-lg shadow-md border border-gray-100 hover:shadow-lg transition-shadow"
     >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">{label}</span>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{label}</span>
         <div className="flex space-x-2">
-          <button 
+          <motion.button 
             onClick={handleCopy} 
-            className="text-gray-500 hover:text-indigo-600 transition-colors p-1 rounded-full hover:bg-indigo-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="text-gray-500 hover:text-indigo-600 transition-colors p-1.5 rounded-full hover:bg-indigo-50"
             title="번호 복사"
           >
             <Copy size={16} />
-            {copied && (
-              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded">
-                복사됨!
-              </span>
-            )}
-          </button>
-          <button 
+            <AnimatePresence>
+              {copied && (
+                <motion.span 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: -30 }}
+                  exit={{ opacity: 0, y: -40 }}
+                  className="absolute bg-black text-white text-xs py-1 px-2 rounded"
+                >
+                  복사됨!
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+          <motion.button 
             onClick={handleShare} 
-            className="text-gray-500 hover:text-indigo-600 transition-colors p-1 rounded-full hover:bg-indigo-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="text-gray-500 hover:text-indigo-600 transition-colors p-1.5 rounded-full hover:bg-indigo-50"
             title="번호 공유"
           >
             <Share2 size={16} />
-          </button>
+          </motion.button>
         </div>
       </div>
-      <div className="flex justify-between gap-1">
+      <div className="flex justify-between gap-2">
         {numbers.map((number, index) => (
-          <motion.div
-            key={`number-${index}-${number}`}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: index * 0.1, type: 'spring', stiffness: 200 }}
-            className={`w-10 h-10 rounded-full ${getNumberColor(number)} flex items-center justify-center shadow-sm`}
-          >
-            <span className="text-sm font-bold">
-              {number}
-            </span>
-          </motion.div>
+          <div key={`number-${index}-${number}`} className="relative flex items-center justify-center">
+            {index < visibleNumbers.length ? (
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ 
+                  type: 'spring', 
+                  stiffness: 260, 
+                  damping: 20,
+                  duration: 0.6
+                }}
+                className={`w-12 h-12 rounded-full ${getNumberColor(number)} flex items-center justify-center shadow-lg`}
+              >
+                <motion.span 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-base font-bold"
+                >
+                  {number}
+                </motion.span>
+              </motion.div>
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center shadow-sm animate-pulse">
+                <span className="text-transparent">00</span>
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </motion.div>
