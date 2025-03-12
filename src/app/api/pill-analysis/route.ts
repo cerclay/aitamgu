@@ -179,11 +179,11 @@ async function searchPillInfo(features: {
       '노랑': 'yellow', '노란색': 'yellow', '황색': 'yellow',
       '주황': 'orange', '주황색': 'orange',
       '분홍': 'pink', '분홍색': 'pink', '적색': 'red', '빨강': 'red', '빨간색': 'red',
-      '갈색': 'brown', '갈색': 'brown',
+      '갈색': 'brown',
       '초록': 'green', '초록색': 'green', '녹색': 'green',
       '파랑': 'blue', '파란색': 'blue', '청색': 'blue',
       '보라': 'purple', '보라색': 'purple', '자주색': 'purple',
-      '회색': 'gray', '회색': 'gray',
+      '회색': 'gray',
       '검정': 'black', '검정색': 'black', '흑색': 'black',
       '투명': 'transparent'
     };
