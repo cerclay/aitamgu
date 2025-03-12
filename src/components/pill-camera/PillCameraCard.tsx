@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Camera, Upload, Image, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, Camera, Upload, Image as ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,12 +49,12 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
     // 이미지 품질 확인을 위한 추가 검사
     // 브라우저 환경에서만 실행
     if (typeof window !== 'undefined') {
-      const img = new Image();
+      const imgElement = new window.Image();
       const objectUrl = URL.createObjectURL(file);
       
-      img.onload = () => {
+      imgElement.onload = () => {
         // 이미지 크기가 너무 작은 경우
-        if (img.width < 200 || img.height < 200) {
+        if (imgElement.width < 200 || imgElement.height < 200) {
           setError('이미지 해상도가 너무 낮습니다. 더 선명한 이미지를 사용해주세요.');
           URL.revokeObjectURL(objectUrl);
           return;
@@ -64,12 +64,12 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
         setPreviewUrl(objectUrl);
       };
       
-      img.onerror = () => {
+      imgElement.onerror = () => {
         setError('이미지를 로드할 수 없습니다. 다른 이미지를 시도해주세요.');
         URL.revokeObjectURL(objectUrl);
       };
       
-      img.src = objectUrl;
+      imgElement.src = objectUrl;
     } else {
       // 서버 사이드 렌더링 환경에서는 간단히 처리
       setError(null);
@@ -248,7 +248,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
               onDrop={handleDrop}
             >
               <div className="flex flex-col items-center justify-center text-center">
-                <Image className="h-12 w-12 text-blue-500 mb-4" />
+                <ImageIcon className="h-12 w-12 text-blue-500 mb-4" />
                 <h3 className="text-lg font-medium mb-2">이미지 업로드</h3>
                 <p className="text-sm text-gray-500 mb-4">
                   이미지를 드래그하여 놓거나 파일을 선택하세요
@@ -296,7 +296,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
                   className="mt-4"
                 >
                   <p className="text-sm text-gray-500 mb-2 flex items-center">
-                    <Image className="h-4 w-4 mr-1" />
+                    <ImageIcon className="h-4 w-4 mr-1" />
                     미리보기
                   </p>
                   <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-md border shadow-sm">
@@ -368,7 +368,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
                   className="mt-4"
                 >
                   <p className="text-sm text-gray-500 mb-2 flex items-center">
-                    <Image className="h-4 w-4 mr-1" />
+                    <ImageIcon className="h-4 w-4 mr-1" />
                     촬영된 이미지
                   </p>
                   <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-md border shadow-sm">
