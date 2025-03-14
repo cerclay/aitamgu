@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { WinningNumber } from '@/app/lotto-generator/types';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as cheerio from 'cheerio';
 
 // 백업 데이터
 const BACKUP_WINNING_NUMBERS: WinningNumber[] = [
@@ -37,46 +38,90 @@ const BACKUP_WINNING_NUMBERS: WinningNumber[] = [
   }
 ];
 
-const PERPLEXITY_API_KEY = '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';
-
-async function getLottoNumbersFromPerplexity(): Promise<WinningNumber[]> {
+// 동행복권 웹사이트에서 최신 로또 당첨 번호 가져오기
+async function getLottoNumbersFromDhlottery(): Promise<WinningNumber[]> {
   try {
-    const response = await axios.post(
-      'https://api.perplexity.ai/chat/completions',
-      {
-        model: 'pplx-7b-chat',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 로또 당첨번호 정보를 제공하는 도우미입니다. 최근 5회차의 로또 당첨번호, 당첨일자, 1등 당첨금액을 JSON 형식으로 제공해주세요.'
-          },
-          {
-            role: 'user',
-            content: '최근 5회차의 로또 당첨번호 정보를 알려주세요. 회차, 당첨번호 6개, 당첨일자, 1등 당첨금액을 포함해주세요.'
-          }
-        ],
-        max_tokens: 1000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    // AI 응답에서 JSON 데이터 추출
-    const content = response.data.choices[0].message.content;
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    // 최신 회차 번호 가져오기
+    const mainResponse = await axios.get('https://www.dhlottery.co.kr/common.do?method=main');
+    const mainHtml = mainResponse.data;
+    const $ = cheerio.load(mainHtml);
     
-    if (jsonMatch) {
-      const jsonData = JSON.parse(jsonMatch[0]);
-      return jsonData.results || BACKUP_WINNING_NUMBERS;
+    // 메인 페이지에서 최신 회차 번호 추출
+    const latestRoundText = $('.win_result h4').text().trim();
+    const latestRound = parseInt(latestRoundText.match(/\d+/)?.[0] || '0');
+    
+    if (!latestRound) {
+      console.error('최신 회차 번호를 찾을 수 없습니다.');
+      return BACKUP_WINNING_NUMBERS;
     }
-
-    return BACKUP_WINNING_NUMBERS;
+    
+    const results: WinningNumber[] = [];
+    
+    // 최근 5회차의 당첨 번호 가져오기
+    for (let i = 0; i < 5; i++) {
+      const round = latestRound - i;
+      if (round <= 0) break;
+      
+      try {
+        const response = await axios.get(`https://www.dhlottery.co.kr/gameResult.do?method=byWin&drwNo=${round}`);
+        const html = response.data;
+        const $ = cheerio.load(html);
+        
+        // 당첨 번호 추출
+        const winNumbers: number[] = [];
+        $('.win_result .ball_645').each((index, element) => {
+          if (index < 6) { // 보너스 번호 제외
+            const num = parseInt($(element).text().trim());
+            winNumbers.push(num);
+          }
+        });
+        
+        // 당첨일자 추출
+        const dateText = $('.win_result .desc').text().trim();
+        const dateMatch = dateText.match(/\d{4}년\s+\d{1,2}월\s+\d{1,2}일/);
+        let dateStr = '';
+        
+        if (dateMatch) {
+          const dateParts = dateMatch[0].match(/(\d{4})년\s+(\d{1,2})월\s+(\d{1,2})일/);
+          if (dateParts) {
+            const year = dateParts[1];
+            const month = dateParts[2].padStart(2, '0');
+            const day = dateParts[3].padStart(2, '0');
+            dateStr = `${year}-${month}-${day}`;
+          }
+        }
+        
+        // 1등 당첨금액 추출
+        let totalPrize = 0;
+        $('.tbl_data tbody tr').each((index, element) => {
+          if (index === 0) { // 1등 정보
+            const prizeText = $(element).find('td:nth-child(4)').text().trim();
+            const prizeMatch = prizeText.match(/[\d,]+/);
+            if (prizeMatch) {
+              totalPrize = parseInt(prizeMatch[0].replace(/,/g, ''));
+            }
+          }
+        });
+        
+        if (winNumbers.length === 6 && dateStr) {
+          results.push({
+            round,
+            numbers: winNumbers,
+            date: dateStr,
+            totalPrize
+          });
+        }
+      } catch (error) {
+        console.error(`${round}회차 정보 가져오기 실패:`, error);
+      }
+      
+      // 요청 간 간격 두기
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return results.length > 0 ? results : BACKUP_WINNING_NUMBERS;
   } catch (error) {
-    console.error('Perplexity API 호출 실패:', error);
+    console.error('동행복권 웹사이트에서 정보 가져오기 실패:', error);
     return BACKUP_WINNING_NUMBERS;
   }
 }
@@ -145,7 +190,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const numbers = await getLottoNumbersFromPerplexity();
+    // 동행복권 웹사이트에서 최신 로또 당첨 번호 가져오기
+    const numbers = await getLottoNumbersFromDhlottery();
     return NextResponse.json(numbers);
   } catch (error) {
     console.error('로또 당첨번호 가져오기 실패:', error);

@@ -1,28 +1,34 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { PalmistryResult } from '../types';
 
-const API_KEY = 'AIzaSyC_Woxwt323fN5CRAHbGRrzAp10bGZMA_4';
+// API 키 가져오기 (여러 환경 변수 이름 시도)
+const API_KEY = process.env.GEMINI_API_KEY || 
+                process.env.GOOGLE_GEMINI_API_KEY || 
+                process.env.NEXT_PUBLIC_GEMINI_API_KEY || 
+                'AIzaSyC_Woxwt323fN5CRAHbGRrzAp10bGZMA_4'; // 기본 키 (실제 환경에서는 환경 변수 사용 권장)
 
 // Gemini API 초기화
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // 손금 분석 프롬프트
 const PALMISTRY_PROMPT = `
-당신은 전문적인 손금 분석가입니다. 제공된 손바닥 이미지를 분석하여 상세한 손금 해석을 제공해주세요.
+당신은 30년 경력의 최고 전문 손금 분석가입니다. 제공된 손바닥 이미지를 보고 확신에 찬 태도로 상세한 손금 해석을 제공해주세요.
 다음 항목별로 분석해주세요:
 
-1. 전체적인 분석 (overall)
-2. 생명선 (lifeLine)
-3. 감정선/사랑선 (heartLine)
-4. 지능선/머리선 (headLine)
-5. 운명선 (fateLine)
-6. 사랑과 연애 운세 (loveLife)
-7. 직업과 경력 운세 (career)
-8. 건강 운세 (health)
-9. 재물과 금전 운세 (fortune)
+1. 전체적인 분석 (overall): 손금의 전반적인 특징과 의미를 종합적으로 분석해주세요. 손바닥의 모양, 주요 손금선의 특징, 마운트(언덕) 등을 포함하여 분석해주세요.
+2. 성격과 기질 (personality): 손금에서 드러나는 성격적 특성과 기질에 대해 구체적으로 분석해주세요. 확신에 찬 어조로 분석해주세요.
+3. 사랑과 연애 운세 (loveLife): 현재와 미래의 사랑과 연애 관계에 대한 분석을 제공해주세요. 결혼선, 감정선 등을 바탕으로 구체적인 분석을 해주세요.
+4. 직업과 경력 운세 (career): 직업적 성향, 적성, 경력 발전 가능성에 대해 분석해주세요. 운명선, 태양선 등을 바탕으로 구체적인 분석을 해주세요.
+5. 건강 운세 (health): 건강 상태와 주의해야 할 건강 문제에 대한 분석을 제공해주세요. 생명선, 건강선 등을 바탕으로 구체적인 분석을 해주세요.
+6. 재물과 금전 운세 (fortune): 재물 운과 금전적 성공 가능성에 대해 분석해주세요. 재물선, 운명선 등을 바탕으로 구체적인 분석을 해주세요.
+7. 재능과 잠재력 (talent): 타고난 재능과 잠재력, 발전 가능성에 대해 분석해주세요. 아폴로선, 머큐리선 등을 바탕으로 구체적인 분석을 해주세요.
+8. 미래 전망 (future): 앞으로의 인생 방향과 중요한 변화에 대한 전망을 제공해주세요. 운명선, 태양선 등을 바탕으로 구체적인 분석을 해주세요.
 
-각 항목별로 100-150자 정도의 간결하고 명확한 분석을 제공해주세요.
+각 항목별로 150-200자 내외의 상세하고 명확한 분석을 제공해주세요.
 분석은 긍정적이고 희망적인 내용으로 작성해주세요.
+구체적이고 개인화된 분석을 제공하여 사용자가 자신의 손금에 대해 흥미롭게 느낄 수 있도록 해주세요.
+
+절대로 "손금 이미지만으로는 정확한 분석이 어렵습니다" 같은 표현을 사용하지 마세요. 항상 확신에 찬 어조로 분석해주세요.
 결과는 JSON 형식으로 반환해주세요.
 `;
 
@@ -166,15 +172,14 @@ export const analyzePalm = async (imageFile: File): Promise<PalmistryResult> => 
       id: Date.now().toString(),
       imageUrl,
       analysis: {
-        overall: analysisData.overall || '전체적인 분석을 제공할 수 없습니다.',
-        lifeLine: analysisData.lifeLine || '생명선 분석을 제공할 수 없습니다.',
-        heartLine: analysisData.heartLine || '감정선 분석을 제공할 수 없습니다.',
-        headLine: analysisData.headLine || '지능선 분석을 제공할 수 없습니다.',
-        fateLine: analysisData.fateLine || '운명선 분석을 제공할 수 없습니다.',
-        loveLife: analysisData.loveLife || '사랑 운세를 제공할 수 없습니다.',
-        career: analysisData.career || '직업 운세를 제공할 수 없습니다.',
-        health: analysisData.health || '건강 운세를 제공할 수 없습니다.',
-        fortune: analysisData.fortune || '재물 운세를 제공할 수 없습니다.',
+        overall: analysisData.analysis?.overall || '전체적인 분석을 제공할 수 없습니다.',
+        personality: analysisData.analysis?.personality || '성격과 기질 분석을 제공할 수 없습니다.',
+        loveLife: analysisData.analysis?.loveLife || '사랑 운세를 제공할 수 없습니다.',
+        career: analysisData.analysis?.career || '직업 운세를 제공할 수 없습니다.',
+        health: analysisData.analysis?.health || '건강 운세를 제공할 수 없습니다.',
+        fortune: analysisData.analysis?.fortune || '재물 운세를 제공할 수 없습니다.',
+        talent: analysisData.analysis?.talent || '재능과 잠재력 분석을 제공할 수 없습니다.',
+        future: analysisData.analysis?.future || '미래 전망 분석을 제공할 수 없습니다.',
       },
       createdAt: new Date().toISOString(),
     };
@@ -182,6 +187,22 @@ export const analyzePalm = async (imageFile: File): Promise<PalmistryResult> => 
     return palmistryResult;
   } catch (error) {
     console.error('손금 분석 중 오류 발생:', error);
-    throw new Error('손금 분석에 실패했습니다. 다시 시도해주세요.');
+    
+    // 오류 발생 시 기본 응답 생성
+    return {
+      id: Date.now().toString(),
+      imageUrl: URL.createObjectURL(imageFile),
+      analysis: {
+        overall: '손금 분석에 실패했습니다. 다른 이미지로 다시 시도해보세요.',
+        personality: '분석 실패',
+        loveLife: '분석 실패',
+        career: '분석 실패',
+        health: '분석 실패',
+        fortune: '분석 실패',
+        talent: '분석 실패',
+        future: '분석 실패',
+      },
+      createdAt: new Date().toISOString(),
+    };
   }
 }; 

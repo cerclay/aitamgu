@@ -7,7 +7,7 @@ import WinningStats from './components/WinningStats';
 import { generateLottoNumbers } from './utils/numberGenerator';
 import { RECOMMENDATION_OPTIONS } from './constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, RefreshCw, ChevronUp } from 'lucide-react';
+import { Sparkles, RefreshCw, ChevronUp, Gift, Zap } from 'lucide-react';
 
 export default function LottoGenerator() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[][]>([]);
@@ -67,8 +67,10 @@ export default function LottoGenerator() {
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
+          <div className="inline-flex items-center justify-center p-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-4 shadow-lg">
+            <Sparkles className="text-white" size={28} />
+          </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            <Sparkles className="inline-block mr-2 mb-1" size={28} />
             로또 번호 생성기
           </h1>
           <p className="text-gray-600 text-lg">
@@ -80,14 +82,15 @@ export default function LottoGenerator() {
         <motion.div 
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
-          className="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden"
+          className="mb-6 bg-white rounded-2xl shadow-lg overflow-hidden border border-indigo-100"
         >
-          <div 
+          <motion.div 
             className="p-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white flex justify-between items-center cursor-pointer"
             onClick={toggleOptions}
+            whileHover={{ backgroundColor: 'rgba(79, 70, 229, 0.9)' }}
           >
             <h2 className="text-xl font-semibold flex items-center">
-              <span className="mr-2">🎯</span>
+              <Zap className="mr-2" size={20} />
               번호 생성 방식 선택
             </h2>
             <motion.div
@@ -96,7 +99,7 @@ export default function LottoGenerator() {
             >
               <ChevronUp size={20} />
             </motion.div>
-          </div>
+          </motion.div>
           
           <AnimatePresence>
             {showOptions && (
@@ -108,12 +111,12 @@ export default function LottoGenerator() {
                 className="overflow-hidden"
               >
                 <div className="p-4 space-y-3">
-                  {RECOMMENDATION_OPTIONS.map((option) => (
+                  {RECOMMENDATION_OPTIONS.map((option, index) => (
                     <motion.div
                       key={option.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
                       <RecommendationCard
                         option={option}
@@ -150,6 +153,17 @@ export default function LottoGenerator() {
                 AI가 최적의 번호 조합을 분석하고 있습니다.
                 <br />잠시만 기다려주세요.
               </p>
+              
+              <motion.div 
+                className="w-full h-2 bg-gray-200 rounded-full mt-4 overflow-hidden"
+              >
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -162,22 +176,24 @@ export default function LottoGenerator() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
-              className="bg-white rounded-xl shadow-lg p-6 mb-6"
+              className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-indigo-100"
             >
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <span className="bg-indigo-100 text-indigo-600 p-1.5 rounded-full mr-2">🎲</span>
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-1.5 rounded-full mr-2 shadow-md">
+                    <Gift size={18} />
+                  </div>
                   생성된 번호
                 </h2>
                 <div className="flex items-center">
-                  <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full mr-2">
+                  <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full mr-2 font-medium">
                     {getSelectedMethodName()}
                   </span>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleReset}
-                    className="text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 p-2 rounded-full transition-colors"
+                    className="text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 p-2 rounded-full transition-colors shadow-sm"
                   >
                     <RefreshCw size={16} />
                   </motion.button>

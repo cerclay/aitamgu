@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini API 키 (실제 사용 시 환경 변수로 관리해야 합니다)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { stockData, economicData, analysisType } = body;
+    const { stockData, economicData, analysisType = 'comprehensive' } = body;
     
     if (!stockData) {
       return NextResponse.json(
@@ -17,48 +13,66 @@ export async function POST(request: Request) {
       );
     }
     
-    // 분석 유형에 따라 다른 프롬프트 사용
-    let prompt = '';
+    if (!economicData) {
+      return NextResponse.json(
+        { error: '경제 데이터가 필요합니다' },
+        { status: 400 }
+      );
+    }
     
-    switch (analysisType) {
-      case 'technical':
-        prompt = generateTechnicalAnalysisPrompt(stockData);
-        break;
-      case 'fundamental':
-        prompt = generateFundamentalAnalysisPrompt(stockData);
-        break;
-      case 'economic':
-        if (!economicData) {
-          return NextResponse.json(
-            { error: '경제 지표 데이터가 필요합니다' },
-            { status: 400 }
-          );
-        }
-        prompt = generateEconomicAnalysisPrompt(stockData, economicData);
-        break;
-      case 'comprehensive':
-      default:
-        prompt = generateComprehensiveAnalysisPrompt(stockData, economicData);
-        break;
+    // Gemini API 키 가져오기 - 환경 변수 이름 확인
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('Gemini API 키가 설정되지 않았습니다.');
+      // 환경 변수 목록 확인
+      const envVars = Object.keys(process.env).filter(key => 
+        key.includes('API') || 
+        key.includes('KEY') || 
+        key.includes('GEMINI') || 
+        key.includes('GOOGLE')
+      );
+      
+      return NextResponse.json({ 
+        error: 'Google Gemini API 키가 설정되지 않았습니다. 환경변수를 확인하세요.',
+        message: '환경 변수 GEMINI_API_KEY 또는 GOOGLE_GEMINI_API_KEY를 설정해주세요.',
+        availableEnvVars: envVars,
+        setupInstructions: 'Vercel 대시보드에서 환경 변수를 설정하거나 .env.local 파일에 GEMINI_API_KEY=your_api_key를 추가하세요.'
+      }, { status: 500 });
+    }
+    
+    // 분석 유형에 따른 프롬프트 생성
+    let prompt = '';
+    if (analysisType === 'technical') {
+      prompt = generateTechnicalAnalysisPrompt(stockData);
+    } else if (analysisType === 'fundamental') {
+      prompt = generateFundamentalAnalysisPrompt(stockData);
+    } else if (analysisType === 'economic') {
+      prompt = generateEconomicAnalysisPrompt(stockData, economicData);
+    } else {
+      prompt = generateComprehensiveAnalysisPrompt(stockData, economicData);
     }
     
     // Gemini API 호출
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    console.log('Gemini API 호출 중...');
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    console.log('Gemini API 응답 받음');
     
     return NextResponse.json({
       analysis: text,
-      analysisType,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Gemini API 오류:', error);
-    return NextResponse.json(
-      { error: '분석 중 오류가 발생했습니다' },
-      { status: 500 }
-    );
+    console.error('주식 분석 오류:', error);
+    return NextResponse.json({ 
+      error: '주식 분석 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
 

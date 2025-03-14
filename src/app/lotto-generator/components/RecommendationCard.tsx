@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { RecommendationOption } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, Check, Loader2 } from 'lucide-react';
+import { Info, Check, Loader2, ArrowRight } from 'lucide-react';
 
 interface RecommendationCardProps {
   option: RecommendationOption;
@@ -39,7 +39,7 @@ export default function RecommendationCard({
   return (
     <div className="w-full">
       <motion.div
-        whileHover={{ scale: isGenerating ? 1 : 1.02 }}
+        whileHover={{ scale: isGenerating ? 1 : 1.03 }}
         whileTap={{ scale: isGenerating ? 1 : 0.98 }}
         className="relative"
       >
@@ -47,8 +47,8 @@ export default function RecommendationCard({
           onClick={handleClick}
           className={`w-full p-5 rounded-2xl shadow-md transition-all duration-300 ${
             isSelected
-              ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
-              : 'bg-white hover:bg-gray-50'
+              ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-2 border-indigo-300'
+              : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-indigo-300'
           } ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           role="button"
           tabIndex={0}
@@ -76,28 +76,37 @@ export default function RecommendationCard({
               {isSelected ? (
                 <motion.div 
                   initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
+                  animate={{ scale: 1, rotate: [0, 10, 0] }}
+                  transition={{ duration: 0.5 }}
                   className="bg-white bg-opacity-20 p-1.5 rounded-full"
                 >
                   <Check size={18} className="text-white" />
                 </motion.div>
               ) : (
-                <motion.div
-                  onClick={handleInfoClick}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="text-gray-400 hover:text-indigo-500 p-1.5 rounded-full hover:bg-indigo-50 transition-colors cursor-pointer"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleInfoClick(e as unknown as React.MouseEvent);
-                    }
-                  }}
-                >
-                  <Info size={18} />
-                </motion.div>
+                <div className="flex items-center">
+                  <motion.div
+                    onClick={handleInfoClick}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="text-gray-400 hover:text-indigo-500 p-1.5 rounded-full hover:bg-indigo-50 transition-colors cursor-pointer mr-1"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInfoClick(e as unknown as React.MouseEvent);
+                      }
+                    }}
+                  >
+                    <Info size={18} />
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ x: 3 }}
+                    className="text-indigo-500 p-1"
+                  >
+                    <ArrowRight size={18} />
+                  </motion.div>
+                </div>
               )}
             </div>
           </div>

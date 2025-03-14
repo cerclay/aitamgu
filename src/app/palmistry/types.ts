@@ -3,16 +3,20 @@ export interface PalmistryResult {
   imageUrl: string;
   analysis: {
     overall: string;
-    lifeLine: string;
-    heartLine: string;
-    headLine: string;
-    fateLine: string;
+    personality: string;
     loveLife: string;
     career: string;
     health: string;
     fortune: string;
+    talent: string;
+    future: string;
   };
   createdAt: string;
+}
+
+export interface PalmLinePoint {
+  x: number;
+  y: number;
 }
 
 export interface PalmistryHistoryItem {
@@ -25,13 +29,12 @@ export interface PalmistryHistoryItem {
 export interface PalmistryAnalysisResponse {
   analysis: {
     overall: string;
-    lifeLine: string;
-    heartLine: string;
-    headLine: string;
-    fateLine: string;
+    personality: string;
     loveLife: string;
     career: string;
     health: string;
     fortune: string;
+    talent: string;
+    future: string;
   };
 } 
