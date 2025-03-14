@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         fcfGrowth: 0, // 야후 파이낸스에서 직접 제공하지 않음
         nextEarningsDate: summary.calendarEvents?.earnings?.earningsDate && 
           summary.calendarEvents.earnings.earningsDate.length > 0 ? 
-          new Date(summary.calendarEvents.earnings.earningsDate[0].raw * 1000).toISOString().split('T')[0] : '',
+          new Date(summary.calendarEvents.earnings.earningsDate[0]).toISOString().split('T')[0] : '',
         analystRatings: {
           buy: summary.financialData?.recommendationKey === 'buy' || 
                summary.financialData?.recommendationKey === 'strong_buy' ? 1 : 0,
