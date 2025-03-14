@@ -80,12 +80,35 @@ export async function POST(request: Request) {
     console.error('Gemini API 오류:', error);
     
     // 오류 발생 시 모의 데이터 생성
-    const mockPrediction = generateMockPrediction(body.stockData, body.modelType || 'transformer');
+    const defaultStockData = {
+      ticker: 'ERROR',
+      companyName: 'Error Company',
+      currentPrice: 100,
+      priceChange: 0,
+      marketCap: 1000000000,
+      technicalIndicators: {
+        rsi: 50,
+        macd: { value: 0, signal: 0, histogram: 0 },
+        bollingerBands: { upper: 110, middle: 100, lower: 90 },
+        ma50: 100,
+        ma200: 100
+      },
+      fundamentals: {
+        pe: 15,
+        eps: 5,
+        revenueGrowth: 5,
+        operatingMargin: 10
+      },
+      patterns: [],
+      description: '오류가 발생했습니다.'
+    };
+    
+    const mockPrediction = generateMockPrediction(defaultStockData, 'transformer');
     
     return NextResponse.json({
       prediction: mockPrediction,
       analysis: '예측 중 오류가 발생했습니다. 모의 데이터를 제공합니다.',
-      modelType: body.modelType || 'transformer',
+      modelType: 'transformer',
       timestamp: new Date().toISOString()
     });
   }
