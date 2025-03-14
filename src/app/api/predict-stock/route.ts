@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Gemini API 오류:', error);
     
-    // 오류 발생 시 모의 데이터 생성
+    // API 호출 실패 시 모의 데이터 생성
     const defaultStockData = {
       ticker: 'ERROR',
       companyName: 'Error Company',
