@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Download, Trash2, Copy, Check, Info, Heart, Brain, Activity, Star, Sparkles, Briefcase, Coins, Lightbulb, Compass, FileText, User } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Trash2, Copy, Check, Info, Heart, Brain, Activity, Star, Sparkles, Briefcase, Coins, Lightbulb, Compass, FileText, User, AlertCircle } from 'lucide-react';
 import { 
   FacebookShareButton, 
   TwitterShareButton, 
