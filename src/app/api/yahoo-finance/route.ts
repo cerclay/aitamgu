@@ -101,8 +101,9 @@ export async function GET(request: NextRequest) {
         grossMargin: summary.financialData?.grossMargins ? summary.financialData.grossMargins * 100 : 0,
         fcf: summary.financialData?.freeCashflow || 0,
         fcfGrowth: 0, // 야후 파이낸스에서 직접 제공하지 않음
-        nextEarningsDate: summary.defaultKeyStatistics?.nextEarningsDate ? 
-          new Date(summary.defaultKeyStatistics.nextEarningsDate).toISOString() : '',
+        nextEarningsDate: summary.calendarEvents?.earnings?.earningsDate && 
+          summary.calendarEvents.earnings.earningsDate.length > 0 ? 
+          new Date(summary.calendarEvents.earnings.earningsDate[0].raw * 1000).toISOString().split('T')[0] : '',
         analystRatings: {
           buy: summary.financialData?.recommendationKey === 'buy' || 
                summary.financialData?.recommendationKey === 'strong_buy' ? 1 : 0,
