@@ -492,7 +492,7 @@ function generateMockPrediction(stockData: StockData, modelType: string): Predic
     shortTerm: {
       price: Number(shortTermPrice.toFixed(2)),
       change: Number(shortTermChange.toFixed(2)),
-      probability: Number((isLSTM ? 60 : 65) + Math.random() * 20).toFixed(1),
+      probability: Number(Number((isLSTM ? 60 : 65) + Math.random() * 20).toFixed(1)),
       range: {
         min: Number((shortTermPrice * (1 - 0.05 * volatilityFactor)).toFixed(2)),
         max: Number((shortTermPrice * (1 + 0.05 * volatilityFactor)).toFixed(2))
@@ -501,7 +501,7 @@ function generateMockPrediction(stockData: StockData, modelType: string): Predic
     mediumTerm: {
       price: Number(mediumTermPrice.toFixed(2)),
       change: Number(mediumTermChange.toFixed(2)),
-      probability: Number((isLSTM ? 55 : 60) + Math.random() * 20).toFixed(1),
+      probability: Number(Number((isLSTM ? 55 : 60) + Math.random() * 20).toFixed(1)),
       range: {
         min: Number((mediumTermPrice * (1 - 0.1 * volatilityFactor)).toFixed(2)),
         max: Number((mediumTermPrice * (1 + 0.1 * volatilityFactor)).toFixed(2))
@@ -510,14 +510,14 @@ function generateMockPrediction(stockData: StockData, modelType: string): Predic
     longTerm: {
       price: Number(longTermPrice.toFixed(2)),
       change: Number(longTermChange.toFixed(2)),
-      probability: Number((isLSTM ? 50 : 55) + Math.random() * 20).toFixed(1),
+      probability: Number(Number((isLSTM ? 50 : 55) + Math.random() * 20).toFixed(1)),
       range: {
         min: Number((longTermPrice * (1 - 0.15 * volatilityFactor)).toFixed(2)),
         max: Number((longTermPrice * (1 + 0.15 * volatilityFactor)).toFixed(2))
       }
     },
     pricePredictions,
-    confidenceScore: Number((isLSTM ? 60 : 65) + Math.random() * 20).toFixed(1),
+    confidenceScore: Number(Number((isLSTM ? 60 : 65) + Math.random() * 20).toFixed(1)),
     modelInfo,
     summary: `${stockData.companyName}'s stock is expected to ${shortTermChange > 0 ? 'rise' : 'fall'} in the short term. In the medium term, it is predicted to show a ${mediumTermChange > 0 ? 'positive' : 'negative'} trend.`,
     summaryKr: `${stockData.companyNameKr || stockData.companyName}의 주가는 단기적으로 ${shortTermChange > 0 ? '상승' : '하락'}할 것으로 예상됩니다. 중기적으로는 ${mediumTermChange > 0 ? '상승' : '하락'} 추세를 보일 것으로 예측됩니다.`,
