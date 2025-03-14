@@ -83,24 +83,85 @@ export async function POST(request: Request) {
     const defaultStockData = {
       ticker: 'ERROR',
       companyName: 'Error Company',
+      companyNameKr: '에러 회사',
+      sector: '기술',
+      industry: '소프트웨어',
       currentPrice: 100,
       priceChange: 0,
       marketCap: 1000000000,
+      volume: 1000000,
+      high52Week: 120,
+      low52Week: 80,
+      lastUpdated: new Date().toISOString(),
+      description: '오류가 발생했습니다.',
+      descriptionKr: '오류가 발생했습니다.',
+      historicalPrices: [
+        {
+          date: new Date().toISOString().split('T')[0],
+          price: 100,
+          volume: 1000000,
+          open: 99,
+          high: 101,
+          low: 98
+        }
+      ],
       technicalIndicators: {
         rsi: 50,
         macd: { value: 0, signal: 0, histogram: 0 },
-        bollingerBands: { upper: 110, middle: 100, lower: 90 },
+        bollingerBands: { upper: 110, middle: 100, lower: 90, width: 20 },
         ma50: 100,
-        ma200: 100
+        ma200: 100,
+        ema20: 100,
+        ema50: 100,
+        atr: 2,
+        obv: 1000000,
+        stochastic: { k: 50, d: 50 },
+        adx: 20,
+        supportLevels: [90, 85],
+        resistanceLevels: [110, 115]
       },
       fundamentals: {
         pe: 15,
+        forwardPE: 14,
         eps: 5,
+        epsGrowth: 5,
+        dividendYield: 2,
+        dividendGrowth: 1,
+        peg: 1.5,
+        pb: 2,
+        ps: 3,
+        pcf: 10,
+        roe: 15,
+        roa: 10,
+        roic: 12,
+        debtToEquity: 0.5,
+        currentRatio: 2,
+        quickRatio: 1.5,
+        revenue: 1000000000,
         revenueGrowth: 5,
-        operatingMargin: 10
+        grossMargin: 40,
+        netIncome: 100000000,
+        netIncomeGrowth: 5,
+        operatingMargin: 10,
+        fcf: 50000000,
+        fcfGrowth: 5,
+        nextEarningsDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
+        analystRatings: {
+          buy: 5,
+          hold: 3,
+          sell: 1,
+          targetPrice: 110
+        }
       },
       patterns: [],
-      description: '오류가 발생했습니다.'
+      upcomingEvents: [],
+      momentum: {
+        shortTerm: 0,
+        mediumTerm: 0,
+        longTerm: 0,
+        relativeStrength: 0,
+        sectorPerformance: 0
+      }
     };
     
     const mockPrediction = generateMockPrediction(defaultStockData, 'transformer');
