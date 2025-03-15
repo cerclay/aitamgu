@@ -271,7 +271,7 @@ export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> =>
     // API 호출 시작
     try {
       // 서버 사이드 API 호출
-      const response = await fetch('/api/fred-economic-indicators');
+      const response = await fetch('/api/fred');
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -383,7 +383,7 @@ export const generatePrediction = async (
     // API 호출 시작
     try {
       // 서버 사이드 API 호출
-      const response = await fetch('/api/stock-prediction', {
+      const response = await fetch('/api/predict-stock', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
