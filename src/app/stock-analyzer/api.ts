@@ -11,6 +11,16 @@ const YAHOO_FINANCE_API_KEY = process.env.NEXT_PUBLIC_YAHOO_FINANCE_API_KEY;
 const cache: Record<string, { data: any, timestamp: number }> = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5분
 
+// AIAnalysisResponse 타입 정의
+interface AIAnalysisResponse {
+  analysis: string;
+  analysisKr?: string;
+  prediction: PredictionResult;
+  analysisType: string;
+  modelType: string;
+  timestamp: string;
+}
+
 // 주식 데이터 가져오기
 export const fetchStockData = async (symbol: string): Promise<StockData> => {
   try {
@@ -762,7 +772,7 @@ function generatePricePredictions(
   shortTermPrice: number,
   mediumTermPrice: number,
   longTermPrice: number
-): { date: string; predictedPrice: number }[] {
+): { date: string; predictedPrice: number; range: { min: number; max: number } }[] {
   const predictions = [];
   const today = new Date();
   
@@ -803,9 +813,20 @@ function generatePricePredictions(
     const volatility = currentPrice * 0.008 * Math.random();
     predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
     
+    // 예측 가격 반올림
+    const finalPredictedPrice = Number(predictedPrice.toFixed(2));
+    
+    // 범위 계산 (예측 가격의 ±5%)
+    const rangeMin = Number((finalPredictedPrice * 0.95).toFixed(2));
+    const rangeMax = Number((finalPredictedPrice * 1.05).toFixed(2));
+    
     predictions.push({
       date: date.toISOString().split('T')[0],
-      predictedPrice: Number(predictedPrice.toFixed(2)),
+      predictedPrice: finalPredictedPrice,
+      range: {
+        min: rangeMin,
+        max: rangeMax
+      }
     });
   }
   
@@ -820,7 +841,7 @@ function generateStrengths(stockData: StockData, sentiment: number): string[] {
     strengths.push('RSI가 과매도 구간에 있어 반등 가능성이 있습니다.');
   }
   
-  if (stockData.technicalIndicators.macd > 0) {
+  if (stockData.technicalIndicators.macd.value > 0) {
     strengths.push('MACD가 양수로, 상승 모멘텀이 형성되고 있습니다.');
   }
   
@@ -865,7 +886,7 @@ function generateRisks(stockData: StockData, sentiment: number, economicData: Ec
     risks.push('RSI가 과매수 구간에 있어 단기 조정 가능성이 있습니다.');
   }
   
-  if (stockData.technicalIndicators.macd < 0) {
+  if (stockData.technicalIndicators.macd.value < 0) {
     risks.push('MACD가 음수로, 하락 모멘텀이 형성되고 있습니다.');
   }
   
@@ -1085,18 +1106,15 @@ export function generateMockStockData(symbol: string): StockData {
       historicalPrices: [],
       technicalIndicators: {
         rsi: 50,
-        macd: { value: 0, signal: 0, histogram: 0 },
-        bollingerBands: { upper: 120, middle: 100, lower: 80, width: 40 },
-        ma50: 100,
-        ma200: 100,
-        ema20: 100,
-        ema50: 100,
-        atr: 5,
-        obv: 1000000,
-        stochastic: { k: 50, d: 50 },
-        adx: 25,
-        supportLevels: [90, 80],
-        resistanceLevels: [110, 120]
+        macd: {
+          value: 0,
+          signal: 0,
+          histogram: 0
+        },
+        bollingerUpper: 0,
+        bollingerLower: 0,
+        ma50: 0,
+        ma200: 0
       },
       fundamentals: {
         pe: 15,
@@ -1530,7 +1548,11 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     historicalPrices: [],
     technicalIndicators: {
       rsi: 50,
-      macd: 0,
+      macd: {
+        value: 0,
+        signal: 0,
+        histogram: 0
+      },
       bollingerUpper: 0,
       bollingerLower: 0,
       ma50: 0,
@@ -1574,22 +1596,51 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     shortTerm: {
       price: shortTermPrice,
       change: shortTermChange,
+      probability: 70,
+      range: {
+        min: shortTermPrice * 0.95,
+        max: shortTermPrice * 1.05
+      }
     },
     mediumTerm: {
       price: mediumTermPrice,
       change: mediumTermChange,
+      probability: 60,
+      range: {
+        min: mediumTermPrice * 0.9,
+        max: mediumTermPrice * 1.1
+      }
     },
     longTerm: {
       price: longTermPrice,
       change: longTermChange,
+      probability: 50,
+      range: {
+        min: longTermPrice * 0.85,
+        max: longTermPrice * 1.15
+      }
     },
     pricePredictions,
     confidenceScore: 60 + Math.floor(Math.random() * 30), // 60-89% 신뢰도
+    modelInfo: {
+      type: 'Transformer',
+      accuracy: 80,
+      features: [
+        '과거 주가 데이터',
+        '거래량',
+        '기술적 지표',
+        '시장 지표'
+      ],
+      trainPeriod: '2018-01-01 ~ 현재'
+    },
     summary,
+    summaryKr: summary,
     strengths,
     risks,
     recommendation: recommendation.en,
     recommendationKr: recommendation.kr,
+    analysisDetails: '',
+    analysisDetailsKr: ''
   };
 }
 
