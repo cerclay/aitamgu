@@ -101,10 +101,10 @@ export const exportPalmistryResultAsText = (result: PalmistryResult): void => {
     // 각 분석 항목 추가
     content += `✨ 종합 분석\n${analysis.overall}\n\n`;
     content += `👤 성격\n${analysis.personality}\n\n`;
-    content += `💖 사랑\n${analysis.love}\n\n`;
+    content += `💖 사랑\n${analysis.loveLife}\n\n`;
     content += `💼 직업\n${analysis.career}\n\n`;
     content += `🏥 건강\n${analysis.health}\n\n`;
-    content += `💰 재물\n${analysis.wealth}\n\n`;
+    content += `💰 재물\n${analysis.fortune}\n\n`;
     content += `💡 재능\n${analysis.talent}\n\n`;
     content += `🧭 미래\n${analysis.future}\n\n`;
     
