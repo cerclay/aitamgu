@@ -271,7 +271,17 @@ export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> =>
     // API 호출 시작
     try {
       // 서버 사이드 API 호출
-      const response = await fetch('/api/fred');
+      const response = await fetch('/api/fred', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          indicators: ['gdp', 'unemployment', 'inflation', 'interest_rate', 'treasury_10y'],
+          start_date: getOneYearAgoDate(),
+          end_date: getCurrentDate()
+        }),
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -370,6 +380,19 @@ const generateMockEconomicIndicators = (): EconomicIndicator[] => {
   ];
   
   return indicators;
+};
+
+// 현재 날짜를 YYYY-MM-DD 형식으로 반환하는 함수
+const getCurrentDate = (): string => {
+  const now = new Date();
+  return now.toISOString().split('T')[0];
+};
+
+// 1년 전 날짜를 YYYY-MM-DD 형식으로 반환하는 함수
+const getOneYearAgoDate = (): string => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 1);
+  return date.toISOString().split('T')[0];
 };
 
 // 주식 예측 생성
