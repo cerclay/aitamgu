@@ -6,10 +6,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Yahoo Finance API ??const YAHOO_FINANCE_API_KEY = process.env.NEXT_PUBLIC_YAHOO_FINANCE_API_KEY;
 
-// 간단??메모�?캐시
+// 媛꾨떒??硫붾え由?罹먯떆
 const cache: Record<string, { data: any, timestamp: number }> = {};
-const CACHE_DURATION = 5 * 60 * 1000; // 5�?
-// AIAnalysisResponse ?�???�의
+const CACHE_DURATION = 5 * 60 * 1000; // 5遺?
+// AIAnalysisResponse ????뺤쓽
 interface AIAnalysisResponse {
   analysis: string;
   analysisKr?: string;
@@ -19,51 +19,51 @@ interface AIAnalysisResponse {
   timestamp: string;
 }
 
-// 주식 ?�이??가?�오�?export const fetchStockData = async (symbol: string): Promise<StockData> => {
+// 二쇱떇 ?곗씠??媛?몄삤湲?export const fetchStockData = async (symbol: string): Promise<StockData> => {
   try {
-    // 캐시 ???�성
+    // 罹먯떆 ???앹꽦
     const cacheKey = `stock_${symbol.toUpperCase()}`;
     
-    // 로컬 ?�토리�??�서 캐시???�이???�인 (브라?��? ?�경?�서�?
+    // 濡쒖뺄 ?ㅽ넗由ъ??먯꽌 罹먯떆???곗씠???뺤씤 (釉뚮씪?곗? ?섍꼍?먯꽌留?
     if (typeof window !== 'undefined') {
       const cachedData = localStorage.getItem(cacheKey);
       if (cachedData) {
         try {
           const { data, timestamp } = JSON.parse(cachedData);
-          // 캐시가 5�??�내??경우 캐시???�이??반환
+          // 罹먯떆媛 5遺??대궡??寃쎌슦 罹먯떆???곗씠??諛섑솚
           if (Date.now() - timestamp < 5 * 60 * 1000) {
-            console.log('캐시??주식 ?�이???�용:', symbol);
+            console.log('罹먯떆??二쇱떇 ?곗씠???ъ슜:', symbol);
             return data;
           }
         } catch (cacheError) {
-          console.warn('캐시 ?�이???�싱 ?�류:', cacheError);
-          // 캐시 ?�류 ??무시?�고 계속 진행
+          console.warn('罹먯떆 ?곗씠???뚯떛 ?ㅻ쪟:', cacheError);
+          // 罹먯떆 ?ㅻ쪟 ??臾댁떆?섍퀬 怨꾩냽 吏꾪뻾
         }
       }
     }
     
-    console.log('Yahoo Finance API ?�출 ?�도:', symbol);
+    console.log('Yahoo Finance API ?몄텧 ?쒕룄:', symbol);
     
-    // API ?�출 ?�도
+    // API ?몄텧 ?쒕룄
     try {
-      // ?�후 ?�이?�스 API ?�출
+      // ?쇳썑 ?뚯씠?몄뒪 API ?몄텧
       const response = await fetch(`/api/yahoo-finance?symbol=${symbol}`);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Yahoo Finance API ?�답 ?�류:', errorText);
-        throw new Error(`API ?�답 ?�류: ${response.status} ${errorText}`);
+        console.error('Yahoo Finance API ?묐떟 ?ㅻ쪟:', errorText);
+        throw new Error(`API ?묐떟 ?ㅻ쪟: ${response.status} ${errorText}`);
       }
       
       const data = await response.json();
       
-      // ?�수 ?�이???�인
+      // ?꾩닔 ?곗씠???뺤씤
       if (!data.ticker || !data.currentPrice) {
-        console.error('Yahoo Finance API ?�답???�수 ?�이?��? ?�습?�다:', data);
-        throw new Error('API ?�답???�수 ?�이?��? ?�습?�다');
+        console.error('Yahoo Finance API ?묐떟???꾩닔 ?곗씠?곌? ?놁뒿?덈떎:', data);
+        throw new Error('API ?묐떟???꾩닔 ?곗씠?곌? ?놁뒿?덈떎');
       }
       
-      // 브라?��? ?�경?�서�?로컬 ?�토리�???캐시
+      // 釉뚮씪?곗? ?섍꼍?먯꽌留?濡쒖뺄 ?ㅽ넗由ъ???罹먯떆
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(cacheKey, JSON.stringify({
@@ -71,27 +71,27 @@ interface AIAnalysisResponse {
             timestamp: Date.now()
           }));
         } catch (storageError) {
-          console.warn('로컬 ?�토리�? ?�???�류:', storageError);
-          // ?�???�류 ??무시?�고 계속 진행
+          console.warn('濡쒖뺄 ?ㅽ넗由ъ? ????ㅻ쪟:', storageError);
+          // ????ㅻ쪟 ??臾댁떆?섍퀬 怨꾩냽 吏꾪뻾
         }
       }
       
-      console.log('Yahoo Finance API ?�출 ?�공:', symbol);
+      console.log('Yahoo Finance API ?몄텧 ?깃났:', symbol);
       return data;
     } catch (apiError) {
-      console.error('Yahoo Finance API ?�출 ?�패:', apiError);
-      // ?�류 발생 ??모의 ?�이???�용?�로 진행
-      console.log('모의 주식 ?�이???�용:', symbol);
+      console.error('Yahoo Finance API ?몄텧 ?ㅽ뙣:', apiError);
+      // ?ㅻ쪟 諛쒖깮 ??紐⑥쓽 ?곗씠???ъ슜?쇰줈 吏꾪뻾
+      console.log('紐⑥쓽 二쇱떇 ?곗씠???ъ슜:', symbol);
       return generateMockStockData(symbol);
     }
   } catch (error) {
-    // 최종 ?�외 처리 - ?�떤 ?�류가 발생?�더?�도 모의 ?�이??반환
-    console.error('주식 ?�이??처리 �??�상�?못한 ?�류:', error);
+    // 理쒖쥌 ?덉쇅 泥섎━ - ?대뼡 ?ㅻ쪟媛 諛쒖깮?섎뜑?쇰룄 紐⑥쓽 ?곗씠??諛섑솚
+    console.error('二쇱떇 ?곗씠??泥섎━ 以??덉긽移?紐삵븳 ?ㅻ쪟:', error);
     return generateMockStockData(symbol);
   }
 };
 
-// 과거 주�? ?�이???�성 (목업)
+// 怨쇨굅 二쇨? ?곗씠???앹꽦 (紐⑹뾽)
 function generateMockHistoricalPrices(currentPrice: number): { date: string; price: number; volume: number; open: number; high: number; low: number }[] {
   const historicalPrices = [];
   const today = new Date();
@@ -101,16 +101,16 @@ function generateMockHistoricalPrices(currentPrice: number): { date: string; pri
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     
-    // ?�간???�덤 변??추�?
+    // ?쎄컙???쒕뜡 蹂??異붽?
     const dailyChange = 0.98 + Math.random() * 0.04;
     price = price * dailyChange;
     
-    // 고�?, ?�가, ?��? ?�성
+    // 怨좉?, ?媛, ?쒓? ?앹꽦
     const high = price * (1 + Math.random() * 0.02);
     const low = price * (1 - Math.random() * 0.02);
     const open = low + Math.random() * (high - low);
     
-    // 거래???�성 (1백만 ~ 1천만 ?�이)
+    // 嫄곕옒???앹꽦 (1諛깅쭔 ~ 1泥쒕쭔 ?ъ씠)
     const volume = Math.floor(1000000 + Math.random() * 9000000);
     
     historicalPrices.push({
@@ -126,57 +126,49 @@ function generateMockHistoricalPrices(currentPrice: number): { date: string; pri
   return historicalPrices;
 }
 
-// 기술??지??계산
+// 湲곗닠??吏??怨꾩궛
 function calculateTechnicalIndicators(prices: { date: string; price: number }[]): {
   rsi: number;
   macd: number;
-  bollingerBands: {
-    upper: number;
-    middle: number;
-    lower: number;
-    width: number;
-  };
+  bollingerUpper: number;
+  bollingerLower: number;
   ma50: number;
   ma200: number;
 } {
   const priceValues = prices.map(item => item.price);
   
-  // RSI 계산
+  // RSI 怨꾩궛
   const rsi = calculateRSI(prices);
   
-  // 이동평균 계산
+  // ?대룞?됯퇏 怨꾩궛
   const { ma50, ma200 } = calculateMovingAverages(prices);
   
-  // 볼린저 밴드 계산
-  const { upper, lower, middle, width } = calculateBollingerBands(prices);
+  // 蹂쇰┛? 諛대뱶 怨꾩궛
+  const { bollingerUpper, bollingerLower } = calculateBollingerBands(prices);
   
-  // MACD 계산
+  // MACD 怨꾩궛
   const macd = calculateMACD(prices);
   
   return {
     rsi,
     macd,
-    bollingerBands: {
-      upper,
-      middle,
-      lower,
-      width
-    },
+    bollingerUpper,
+    bollingerLower,
     ma50,
     ma200,
   };
 }
 
-// 1?????짜 가?오?function getOneYearAgo() {
+// 1?????좎쭨 媛?몄삤湲?function getOneYearAgo() {
   const date = new Date();
   date.setFullYear(date.getFullYear() - 1);
   return date;
 }
 
-// RSI 계산 (간단??구현)
+// RSI 怨꾩궛 (媛꾨떒??援ы쁽)
 function calculateRSI(prices: { date: string; price: number }[]): number {
-  // ?제 계산?서????복잡???고리즘 ?용???요
-  // ?기?는 간단???시?구현
+  // ?ㅼ젣 怨꾩궛?먯꽌????蹂듭옟???뚭퀬由ъ쬁 ?곸슜???꾩슂
+  // ?ш린?쒕뒗 媛꾨떒???덉떆濡?援ы쁽
   if (prices.length < 14) return 50;
   
   const gains = [];
@@ -196,13 +188,13 @@ function calculateRSI(prices: { date: string; price: number }[]): number {
   const avgGain = gains.reduce((sum, val) => sum + val, 0) / 14;
   const avgLoss = losses.reduce((sum, val) => sum + val, 0) / 14;
   
-  if (avgLoss === 0) return 100; // ?실???으?RSI = 100
+  if (avgLoss === 0) return 100; // ?먯떎???놁쑝硫?RSI = 100
   
   const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
 }
 
-// ?동?균 계산
+// ?대룞?됯퇏 怨꾩궛
 function calculateMovingAverages(prices: { date: string; price: number }[]): { ma50: number; ma200: number } {
   const priceValues = prices.map(item => item.price);
   
@@ -212,7 +204,7 @@ function calculateMovingAverages(prices: { date: string; price: number }[]): { m
   return { ma50, ma200 };
 }
 
-// ?순 ?동?균 계산
+// ?⑥닚 ?대룞?됯퇏 怨꾩궛
 function calculateMA(prices: number[], period: number): number {
   if (prices.length < period) return prices[prices.length - 1];
   
@@ -220,47 +212,33 @@ function calculateMA(prices: number[], period: number): number {
   return slice.reduce((sum, price) => sum + price, 0) / period;
 }
 
-// 볼린저 밴드 계산
-function calculateBollingerBands(prices: { date: string; price: number }[]): { upper: number; lower: number; middle: number; width: number } {
+// 蹂쇰┛? 諛대뱶 怨꾩궛
+function calculateBollingerBands(prices: { date: string; price: number }[]): { bollingerUpper: number; bollingerLower: number } {
   const priceValues = prices.map(item => item.price);
   const period = 20;
   
   if (priceValues.length < period) {
-    const price = priceValues[priceValues.length - 1];
-    const upper = price * 1.05;
-    const lower = price * 0.95;
-    const middle = price;
-    const width = (upper - lower) / middle;
-    
     return { 
-      upper, 
-      lower,
-      middle,
-      width
+      bollingerUpper: priceValues[priceValues.length - 1] * 1.05, 
+      bollingerLower: priceValues[priceValues.length - 1] * 0.95 
     };
   }
   
   const slice = priceValues.slice(priceValues.length - period);
   const ma = slice.reduce((sum, price) => sum + price, 0) / period;
   
-  // 표준 편차 계산
+  // ?쒖? ?몄감 怨꾩궛
   const squaredDiffs = slice.map(price => Math.pow(price - ma, 2));
   const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / period;
   const stdDev = Math.sqrt(variance);
   
-  const upper = ma + (2 * stdDev);
-  const lower = ma - (2 * stdDev);
-  const width = (upper - lower) / ma;
-  
   return {
-    upper,
-    lower,
-    middle: ma,
-    width
+    bollingerUpper: ma + (2 * stdDev),
+    bollingerLower: ma - (2 * stdDev),
   };
 }
 
-// MACD 계산 (간단??구현)
+// MACD 怨꾩궛 (媛꾨떒??援ы쁽)
 function calculateMACD(prices: { date: string; price: number }[]): number {
   const priceValues = prices.map(item => item.price);
   
@@ -270,7 +248,7 @@ function calculateMACD(prices: { date: string; price: number }[]): number {
   return ema12 - ema26;
 }
 
-// 지???동?균 계산
+// 吏???대룞?됯퇏 怨꾩궛
 function calculateEMA(prices: number[], period: number): number {
   if (prices.length < period) return prices[prices.length - 1];
   
@@ -284,166 +262,166 @@ function calculateEMA(prices: number[], period: number): number {
   return ema;
 }
 
-// 경제 지???가?오?export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> => {
+// 寃쎌젣 吏???곗씠??媛?몄삤湲?export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> => {
   try {
-    // ?제 API ?출 ??모의 ?이??반환
+    // ?ㅼ젣 API ?몄텧 ???紐⑥쓽 ?곗씠??諛섑솚
     return [
       {
         name: 'GDP Growth Rate',
-        nameKr: 'GDP ?장?,
+        nameKr: 'GDP ?깆옣瑜?,
         value: 2.1,
         unit: '%',
         change: 0.3,
-        previousPeriod: '?분?,
+        previousPeriod: '?꾨텇湲?,
         source: 'FRED',
-        description: '? 총생???장?,
+        description: '援?궡 珥앹깮???깆옣瑜?,
         impact: 'positive'
       },
       {
         name: 'Unemployment Rate',
-        nameKr: '?업?,
+        nameKr: '?ㅼ뾽瑜?,
         value: 3.8,
         unit: '%',
         change: -0.1,
-        previousPeriod: '?월',
+        previousPeriod: '?꾩썡',
         source: 'FRED',
-        description: '?동 ?구 ???비율',
+        description: '?몃룞 ?멸뎄 以??ㅼ뾽??鍮꾩쑉',
         impact: 'positive'
       },
       {
         name: 'Inflation Rate',
-        nameKr: '?플?이?,
+        nameKr: '?명뵆?덉씠??,
         value: 3.2,
         unit: '%',
         change: -0.2,
-        previousPeriod: '?월',
+        previousPeriod: '?꾩썡',
         source: 'FRED',
-        description: '?비??물? ?승?,
+        description: '?뚮퉬??臾쇨? ?곸듅瑜?,
         impact: 'negative'
       },
       {
         name: 'Interest Rate',
-        nameKr: '기?금리',
+        nameKr: '湲곗?湲덈━',
         value: 5.25,
         unit: '%',
         change: 0,
-        previousPeriod: '?월',
+        previousPeriod: '?꾩썡',
         source: 'FRED',
-        description: '중앙??기? 금리',
+        description: '以묒븰???湲곗? 湲덈━',
         impact: 'neutral'
       },
       {
         name: 'Consumer Confidence',
-        nameKr: '?비???뢰지?,
+        nameKr: '?뚮퉬???좊ː吏??,
         value: 102.5,
         unit: '',
         change: 1.5,
-        previousPeriod: '?월',
+        previousPeriod: '?꾩썡',
         source: 'Conference Board',
-        description: '?비?들??경제 ???뢰??,
+        description: '?뚮퉬?먮뱾??寃쎌젣 ?곹솴??????좊ː??,
         impact: 'positive'
       },
       {
         name: 'Manufacturing PMI',
-        nameKr: '?조?PMI',
+        nameKr: '?쒖“??PMI',
         value: 51.2,
         unit: '',
         change: -0.3,
-        previousPeriod: '?월',
+        previousPeriod: '?꾩썡',
         source: 'ISM',
-        description: '?조?구매관리자지?,
+        description: '?쒖“??援щℓ愿由ъ옄吏??,
         impact: 'neutral'
       }
     ];
   } catch (error) {
-    console.error('경제 지??가?오??류:', error);
-    throw new Error('경제 지?  가?오????류가 발생?습?다.');
+    console.error('寃쎌젣 吏??媛?몄삤湲??ㅻ쪟:', error);
+    throw new Error('寃쎌젣 吏?쒕? 媛?몄삤??以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
   }
 };
 
-// FRED API??용?여 경제 지???가?오?export async function fetchEconomicIndicatorsFromFRED(): Promise<EconomicIndicator[]> {
-  // FRED API ?? ?요?니??  const FRED_API_KEY = process.env.FRED_API_KEY || '';
+// FRED API瑜??ъ슜?섏뿬 寃쎌젣 吏???곗씠??媛?몄삤湲?export async function fetchEconomicIndicatorsFromFRED(): Promise<EconomicIndicator[]> {
+  // FRED API ?ㅺ? ?꾩슂?⑸땲??  const FRED_API_KEY = process.env.FRED_API_KEY || '';
   
   if (!FRED_API_KEY) {
-    console.warn('FRED API ?? ?정?? ?았?니?? 모의 ?이?? ?용?니??');
+    console.warn('FRED API ?ㅺ? ?ㅼ젙?섏? ?딆븯?듬땲?? 紐⑥쓽 ?곗씠?곕? ?ъ슜?⑸땲??');
     return generateMockEconomicIndicators();
   }
   
-  // 가?올 경제지??목록
+  // 媛?몄삱 寃쎌젣吏??紐⑸줉
     const indicators = [
     { 
       id: 'GDP', 
       name: 'GDP Growth Rate', 
-      nameKr: 'GDP ?장?, 
+      nameKr: 'GDP ?깆옣瑜?, 
       unit: '%', 
-      description: '?총생???장?, 
+      description: '援?궡珥앹깮???깆옣瑜?, 
       impact: 'positive' as const 
     },
     { 
       id: 'UNRATE', 
       name: 'Unemployment Rate', 
-      nameKr: '?업?, 
+      nameKr: '?ㅼ뾽瑜?, 
       unit: '%', 
-      description: '미국 ?업?, 
+      description: '誘멸뎅 ?ㅼ뾽瑜?, 
       impact: 'negative' as const 
     },
     { 
       id: 'CPIAUCSL', 
       name: 'Consumer Price Index', 
-      nameKr: '?비?물가지?, 
+      nameKr: '?뚮퉬?먮Ъ媛吏??, 
       unit: 'Index', 
-      description: '?비?물가지??변?율', 
+      description: '?뚮퉬?먮Ъ媛吏??蹂?붿쑉', 
       impact: 'neutral' as const 
     },
     { 
       id: 'FEDFUNDS', 
       name: 'Federal Funds Rate', 
-      nameKr: '기?금리', 
+      nameKr: '湲곗?湲덈━', 
       unit: '%', 
-      description: '??방준비제??기?금리', 
+      description: '誘??곕갑以鍮꾩젣??湲곗?湲덈━', 
       impact: 'negative' as const 
     },
     { 
       id: 'INDPRO', 
       name: 'Industrial Production', 
-      nameKr: '?업산지?, 
+      nameKr: '?곗뾽?앹궛吏??, 
       unit: 'Index', 
-      description: '?업산지??변?율', 
+      description: '?곗뾽?앹궛吏??蹂?붿쑉', 
       impact: 'positive' as const 
     },
     { 
       id: 'RSAFS', 
       name: 'Retail Sales', 
-      nameKr: '?매?매', 
+      nameKr: '?뚮ℓ?먮ℓ', 
       unit: 'Million $', 
-      description: '?매?매 변?율', 
+      description: '?뚮ℓ?먮ℓ 蹂?붿쑉', 
       impact: 'positive' as const 
     },
     { 
       id: 'HOUST', 
       name: 'Housing Starts', 
-      nameKr: '주택착공건수', 
+      nameKr: '二쇳깮李⑷났嫄댁닔', 
       unit: 'Thousand', 
-      description: '?규 주택착공건수', 
+      description: '?좉퇋 二쇳깮李⑷났嫄댁닔', 
       impact: 'positive' as const 
     },
     { 
       id: 'DEXKOUS', 
       name: 'KRW/USD Exchange Rate', 
-      nameKr: '???러 ?율', 
+      nameKr: '???щ윭 ?섏쑉', 
       unit: 'KRW', 
-      description: '???러 ?율', 
+      description: '???щ윭 ?섏쑉', 
       impact: 'neutral' as const 
     }
   ];
   
   try {
-    // 병렬?모든 지???가    const promises = indicators.map(async (indicator) => {
+    // 蹂묐젹濡?紐⑤뱺 吏???곗씠??媛?몄삤湲?    const promises = indicators.map(async (indicator) => {
       const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${indicator.id}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=2`;
       const response = await fetch(url);
     
     if (!response.ok) {
-        throw new Error(`FRED API ?류: ${response.status}`);
+        throw new Error(`FRED API ?ㅻ쪟: ${response.status}`);
     }
     
     const data = await response.json();
@@ -453,7 +431,7 @@ function calculateEMA(prices: number[], period: number): number {
     const results = await Promise.all(promises);
     return transformFREDData(results, indicators);
   } catch (error) {
-    console.error('FRED 경제지??가?오??패:', error);
+    console.error('FRED 寃쎌젣吏??媛?몄삤湲??ㅽ뙣:', error);
     return generateMockEconomicIndicators();
   }
 }
@@ -473,7 +451,7 @@ function transformFREDData(
         value: 0,
         unit: indicator.unit,
         change: 0,
-        previousPeriod: '?전 기간 ?이???음',
+        previousPeriod: '?댁쟾 湲곌컙 ?곗씠???놁쓬',
         description: indicator.description,
         impact: indicator.impact,
         source: 'FRED'
@@ -499,124 +477,124 @@ function transformFREDData(
   });
 }
 
-// ?번째 ?의
+// 泥?踰덉㎏ ?뺤쓽
 export function generateMockEconomicIndicators(): EconomicIndicator[] {
   return [
     {
       name: 'GDP Growth Rate',
-      nameKr: 'GDP ?장?,
+      nameKr: 'GDP ?깆옣瑜?,
       value: 2.1,
       unit: '%',
       change: 0.3,
       previousPeriod: '2023-Q2',
-      description: '?총생???장?,
+      description: '援?궡珥앹깮???깆옣瑜?,
       impact: 'positive' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Unemployment Rate',
-      nameKr: '?업?,
+      nameKr: '?ㅼ뾽瑜?,
       value: 3.8,
       unit: '%',
       change: -0.1,
       previousPeriod: '2023-08',
-      description: '미국 ?업?,
+      description: '誘멸뎅 ?ㅼ뾽瑜?,
       impact: 'negative' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Consumer Price Index',
-      nameKr: '?비?물가지?,
+      nameKr: '?뚮퉬?먮Ъ媛吏??,
       value: 3.2,
       unit: '%',
       change: -0.2,
       previousPeriod: '2023-08',
-      description: '?비?물가지??변?율',
+      description: '?뚮퉬?먮Ъ媛吏??蹂?붿쑉',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Federal Funds Rate',
-      nameKr: '기?금리',
+      nameKr: '湲곗?湲덈━',
       value: 5.25,
       unit: '%',
       change: 0,
       previousPeriod: '2023-08',
-      description: '??방준비제??기?금리',
+      description: '誘??곕갑以鍮꾩젣??湲곗?湲덈━',
       impact: 'negative' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Industrial Production',
-      nameKr: '?업산지?,
+      nameKr: '?곗뾽?앹궛吏??,
       value: 0.4,
       unit: '%',
       change: 0.7,
       previousPeriod: '2023-08',
-      description: '?업산지??변?율',
+      description: '?곗뾽?앹궛吏??蹂?붿쑉',
       impact: 'positive' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'KRW/USD Exchange Rate',
-      nameKr: '???러 ?율',
+      nameKr: '???щ윭 ?섏쑉',
       value: 1350.25,
       unit: 'KRW',
       change: 2.1,
       previousPeriod: '2023-09-01',
-      description: '???러 ?율',
+      description: '???щ윭 ?섏쑉',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     }
   ];
 }
 
-// ??번째 ?의 (?름 변?
+// ??踰덉㎏ ?뺤쓽 (?대쫫 蹂寃?
 export function createAlternativeMockEconomicData(): EconomicIndicator[] {
-  // 기존 ?수 ?출
+  // 湲곗〈 ?⑥닔 ?몄텧
   return generateMockEconomicIndicators();
 }
 
-// AI ?측 ?성
+// AI ?덉륫 ?앹꽦
 export const generatePrediction = async (
   symbol: string,
   stockData: StockData, 
   economicData: EconomicIndicator[]
 ): Promise<PredictionResult> => {
   try {
-    // ?제 API ?출 ?는 모델 ?용 로직
-    // ?기?는 모의 ?이? ?성?되, ?제 ?이? 기반?로 ??계산 추?
+    // ?ㅼ젣 API ?몄텧 ?먮뒗 紐⑤뜽 ?ъ슜 濡쒖쭅
+    // ?ш린?쒕뒗 紐⑥쓽 ?곗씠?곕? ?앹꽦?섎릺, ?ㅼ젣 ?곗씠?곕? 湲곕컲?쇰줈 ??怨꾩궛 異붽?
     
     const currentPrice = stockData.currentPrice;
     
-    // 기술??지??분석
+    // 湲곗닠??吏??遺꾩꽍
     const technicalSentiment = calculateTechnicalSentiment(stockData.technicalIndicators);
     
-    // 기본??지??분석
+    // 湲곕낯??吏??遺꾩꽍
     const fundamentalSentiment = calculateFundamentalSentiment(stockData.fundamentals);
     
-    // 경제 지??분석
+    // 寃쎌젣 吏??遺꾩꽍
     const economicSentiment = calculateEconomicSentiment(economicData);
     
-    // 종합 감성 ?수 (0-100)
+    // 醫낇빀 媛먯꽦 ?먯닔 (0-100)
     const overallSentiment = (technicalSentiment * 0.4) + (fundamentalSentiment * 0.4) + (economicSentiment * 0.2);
     
-    // 감성 ?수기반?로 가?변???측
+    // 媛먯꽦 ?먯닔瑜?湲곕컲?쇰줈 媛寃?蹂???덉륫
     const volatility = calculateVolatility(stockData.historicalPrices.map(p => p.price));
     
-    // ?기 ?측 (1개월)
+    // ?④린 ?덉륫 (1媛쒖썡)
     const shortTermChange = (overallSentiment - 50) * 0.02 * volatility;
     const shortTermPrice = currentPrice * (1 + shortTermChange / 100);
     
-    // 중기 ?측 (3개월)
+    // 以묎린 ?덉륫 (3媛쒖썡)
     const mediumTermChange = (overallSentiment - 50) * 0.04 * volatility;
     const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
     
-    // ?기 ?측 (6개월)
+    // ?κ린 ?덉륫 (6媛쒖썡)
     const longTermChange = (overallSentiment - 50) * 0.08 * volatility;
     const longTermPrice = currentPrice * (1 + longTermChange / 100);
     
-    // ?측 가??계???성
+    // ?덉륫 媛寃??쒓퀎???앹꽦
     const pricePredictions = generatePricePredictions(
       currentPrice,
       shortTermPrice,
@@ -624,65 +602,65 @@ export const generatePrediction = async (
       longTermPrice
     );
     
-    // ?뢰???수 계산 (기술??지?의 ????에 ?라 조정)
+    // ?좊ː???먯닔 怨꾩궛 (湲곗닠??吏?쒖쓽 ?쇨??깆뿉 ?곕씪 議곗젙)
     let confidenceScore = 65 + Math.random() * 20;
     
-    // 기술??지? ????방향??가리키?뢰???승
+    // 湲곗닠??吏?쒓? ?쇨???諛⑺뼢??媛由ы궎硫??좊ː???곸듅
     let technicalConsistency = 0;
     if ((stockData.technicalIndicators.rsi > 50) === (shortTermChange > 0)) technicalConsistency++;
     if ((stockData.technicalIndicators.macd.value > 0) === (shortTermChange > 0)) technicalConsistency++;
     if ((currentPrice > stockData.technicalIndicators.ma50) === (shortTermChange > 0)) technicalConsistency++;
     if ((currentPrice > stockData.technicalIndicators.ma200) === (shortTermChange > 0)) technicalConsistency++;
     
-    // ??에 ?라 ?뢰??조정 (최? ±10%)
+    // ?쇨??깆뿉 ?곕씪 ?좊ː??議곗젙 (理쒕? 짹10%)
     confidenceScore += (technicalConsistency - 2) * 2.5;
     
-    // ?뢰??범위 ?한 (50-95%)
+    // ?좊ː??踰붿쐞 ?쒗븳 (50-95%)
     confidenceScore = Math.max(50, Math.min(95, confidenceScore));
     
-    // 강점 ???험 ?소 ?성
+    // 媛뺤젏 諛??꾪뿕 ?붿냼 ?앹꽦
     const strengths = [];
     const risks = [];
     
-    // 기술??지??기반 강점/?험
+    // 湲곗닠??吏??湲곕컲 媛뺤젏/?꾪뿕
     if (stockData.technicalIndicators.rsi < 30) {
-      strengths.push('RSI가 과매??구간???어 반등 가?성???습?다');
+      strengths.push('RSI媛 怨쇰ℓ??援ш컙???덉뼱 諛섎벑 媛?μ꽦???덉뒿?덈떎');
     } else if (stockData.technicalIndicators.rsi > 70) {
-      risks.push('RSI가 과매??구간???어 ?기 조정 가?성???습?다');
+      risks.push('RSI媛 怨쇰ℓ??援ш컙???덉뼱 ?④린 議곗젙 媛?μ꽦???덉뒿?덈떎');
     }
     
-    // 경제 지??기반 강점/?험
-    // ?플?이??지??찾기
+    // 寃쎌젣 吏??湲곕컲 媛뺤젏/?꾪뿕
+    // ?명뵆?덉씠??吏??李얘린
     const inflationIndicator = economicData.find(indicator => 
       indicator.name.includes('Inflation') || 
       indicator.name.includes('Consumer Price')
     );
     
-    // 금리 지??찾기
+    // 湲덈━ 吏??李얘린
     const interestRateIndicator = economicData.find(indicator => 
       indicator.name.includes('Interest') || 
       indicator.name.includes('Federal Funds')
     );
     
     if (inflationIndicator && inflationIndicator.change < 0) {
-      strengths.push('?플?이?이 감소 추세? 기업 비용 부?이 ?화?????습?다');
+      strengths.push('?명뵆?덉씠?섏씠 媛먯냼 異붿꽭濡? 湲곗뾽 鍮꾩슜 遺?댁씠 ?꾪솕?????덉뒿?덈떎');
     } else if (inflationIndicator && inflationIndicator.change > 0.5) {
-      risks.push('?플?이?이 ?승 추세? 기업 비용 부?이 증??????습?다');
+      risks.push('?명뵆?덉씠?섏씠 ?곸듅 異붿꽭濡? 湲곗뾽 鍮꾩슜 遺?댁씠 利앷??????덉뒿?덈떎');
     }
     
     if (interestRateIndicator && interestRateIndicator.change < 0) {
-      strengths.push('금리가 ?락 추세? 기업 ?금 조달 비용??감소?????습?다');
+      strengths.push('湲덈━媛 ?섎씫 異붿꽭濡? 湲곗뾽 ?먭툑 議곕떖 鍮꾩슜??媛먯냼?????덉뒿?덈떎');
     } else if (interestRateIndicator && interestRateIndicator.change > 0) {
-      risks.push('금리가 ?승 추세? 기업 ?금 조달 비용??증??????습?다');
+      risks.push('湲덈━媛 ?곸듅 異붿꽭濡? 湲곗뾽 ?먭툑 議곕떖 鍮꾩슜??利앷??????덉뒿?덈떎');
     }
     
-    // ?자 추천 ?성
+    // ?ъ옄 異붿쿇 ?앹꽦
     const recommendation = generateRecommendation(overallSentiment / 100, stockData);
     
-    // ?세 분석 ?용 ?성
-    const analysisDetails = `Transformer 모델? 과거 주? ?이? 거래?? 기술??지?? ?스 감성 분석 결과?습?여 ?측???성?습?다. ${stockData.companyName}?주????재 ${currentPrice.toFixed(2)}?러??거래?고 ?으? 기술??지? 기본??지? 종합?으?분석??결과 ${shortTermChange > 0 ? '?승' : '?락'} 추세가 ?상?니?? ?히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???어 반등 가?성???습?다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???어 ?기 조정 가?성???습?다.' : 'RSI??중립?인 ????착?습?다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?수??승 모멘??보이??습?다.' : 'MACD가 ?수??락 모멘??보이??습?다.'} 경제 지??측면?서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?플?이?이 감소 추세?긍정?입?다.' : '?플?이?이 ?승 추세?주의가 ?요?니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?정?이거나 ?락 추세?긍정?입?다.' : '금리가 ?승 추세?주의가 ?요?니??') : ''}`;
+    // ?곸꽭 遺꾩꽍 ?댁슜 ?앹꽦
+    const analysisDetails = `Transformer 紐⑤뜽? 怨쇨굅 二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?? ?댁뒪 媛먯꽦 遺꾩꽍 寃곌낵瑜??숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. ${stockData.companyName}??二쇨????꾩옱 ${currentPrice.toFixed(2)}?щ윭??嫄곕옒?섍퀬 ?덉쑝硫? 湲곗닠??吏?쒖? 湲곕낯??吏?쒕? 醫낇빀?곸쑝濡?遺꾩꽍??寃곌낵 ${shortTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭媛 ?덉긽?⑸땲?? ?뱁엳 ${stockData.technicalIndicators.rsi < 30 ? 'RSI媛 怨쇰ℓ??援ш컙???덉뼱 諛섎벑 媛?μ꽦???믪뒿?덈떎.' : stockData.technicalIndicators.rsi > 70 ? 'RSI媛 怨쇰ℓ??援ш컙???덉뼱 ?④린 議곗젙 媛?μ꽦???덉뒿?덈떎.' : 'RSI??以묐┰?곸씤 ?섏????좎??섍퀬 ?덉뒿?덈떎.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD媛 ?묒닔濡??곸듅 紐⑤찘???蹂댁씠怨??덉뒿?덈떎.' : 'MACD媛 ?뚯닔濡??섎씫 紐⑤찘???蹂댁씠怨??덉뒿?덈떎.'} 寃쎌젣 吏??痢〓㈃?먯꽌??${inflationIndicator ? (inflationIndicator.change < 0 ? '?명뵆?덉씠?섏씠 媛먯냼 異붿꽭濡?湲띿젙?곸엯?덈떎.' : '?명뵆?덉씠?섏씠 ?곸듅 異붿꽭濡?二쇱쓽媛 ?꾩슂?⑸땲??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '湲덈━媛 ?덉젙?곸씠嫄곕굹 ?섎씫 異붿꽭濡?湲띿젙?곸엯?덈떎.' : '湲덈━媛 ?곸듅 異붿꽭濡?二쇱쓽媛 ?꾩슂?⑸땲??') : ''}`;
     
-    const analysisDetailsKr = `Transformer 모델? 과거 주? ?이? 거래?? 기술??지?? ?스 감성 분석 결과?습?여 ?측???성?습?다. ${stockData.companyNameKr || stockData.companyName}?주????재 ${currentPrice.toFixed(2)}?러??거래?고 ?으? 기술??지? 기본??지? 종합?으?분석??결과 ${shortTermChange > 0 ? '?승' : '?락'} 추세가 ?상?니?? ?히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???어 반등 가?성???습?다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???어 ?기 조정 가?성???습?다.' : 'RSI??중립?인 ????착?습?다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?수??승 모멘??보이??습?다.' : 'MACD가 ?수??락 모멘??보이??습?다.'} 경제 지??측면?서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?플?이?이 감소 추세?긍정?입?다.' : '?플?이?이 ?승 추세?주의가 ?요?니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?정?이거나 ?락 추세?긍정?입?다.' : '금리가 ?승 추세?주의가 ?요?니??') : ''}`;
+    const analysisDetailsKr = `Transformer 紐⑤뜽? 怨쇨굅 二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?? ?댁뒪 媛먯꽦 遺꾩꽍 寃곌낵瑜??숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. ${stockData.companyNameKr || stockData.companyName}??二쇨????꾩옱 ${currentPrice.toFixed(2)}?щ윭??嫄곕옒?섍퀬 ?덉쑝硫? 湲곗닠??吏?쒖? 湲곕낯??吏?쒕? 醫낇빀?곸쑝濡?遺꾩꽍??寃곌낵 ${shortTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭媛 ?덉긽?⑸땲?? ?뱁엳 ${stockData.technicalIndicators.rsi < 30 ? 'RSI媛 怨쇰ℓ??援ш컙???덉뼱 諛섎벑 媛?μ꽦???믪뒿?덈떎.' : stockData.technicalIndicators.rsi > 70 ? 'RSI媛 怨쇰ℓ??援ш컙???덉뼱 ?④린 議곗젙 媛?μ꽦???덉뒿?덈떎.' : 'RSI??以묐┰?곸씤 ?섏????좎??섍퀬 ?덉뒿?덈떎.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD媛 ?묒닔濡??곸듅 紐⑤찘???蹂댁씠怨??덉뒿?덈떎.' : 'MACD媛 ?뚯닔濡??섎씫 紐⑤찘???蹂댁씠怨??덉뒿?덈떎.'} 寃쎌젣 吏??痢〓㈃?먯꽌??${inflationIndicator ? (inflationIndicator.change < 0 ? '?명뵆?덉씠?섏씠 媛먯냼 異붿꽭濡?湲띿젙?곸엯?덈떎.' : '?명뵆?덉씠?섏씠 ?곸듅 異붿꽭濡?二쇱쓽媛 ?꾩슂?⑸땲??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '湲덈━媛 ?덉젙?곸씠嫄곕굹 ?섎씫 異붿꽭濡?湲띿젙?곸엯?덈떎.' : '湲덈━媛 ?곸듅 異붿꽭濡?二쇱쓽媛 ?꾩슂?⑸땲??') : ''}`;
     
     return {
       shortTerm: {
@@ -718,18 +696,18 @@ export const generatePrediction = async (
         type: 'Transformer',
         accuracy: Number((80 + Math.random() * 10).toFixed(1)),
         features: [
-          '과거 주?,
-          '거래??,
-          '기술??지??(RSI, MACD, 볼린저 밴드)',
-          '?장 지??,
-          '계절???턴',
-          '?스 감성 분석',
-          '거시경제 지??
+          '怨쇨굅 二쇨? ?곗씠??,
+          '嫄곕옒??,
+          '湲곗닠??吏??(RSI, MACD, 蹂쇰┛? 諛대뱶)',
+          '?쒖옣 吏??,
+          '怨꾩젅???⑦꽩',
+          '?댁뒪 媛먯꽦 遺꾩꽍',
+          '嫄곗떆寃쎌젣 吏??
         ],
-        trainPeriod: '2015-01-01 ~ ?재'
+        trainPeriod: '2015-01-01 ~ ?꾩옱'
       },
-      summary: `${stockData.companyName}?주????기?으?${shortTermChange > 0 ? '?승' : '?락'}??것으??상?니?? 중기?으로는 ${mediumTermChange > 0 ? '?승' : '?락'} 추세?보일 것으??측?니?? ?기?으로는 ${longTermChange > 0 ? '긍정?인' : '부?적??} ?망??가지??습?다.`,
-      summaryKr: `${stockData.companyNameKr || stockData.companyName}?주????기?으?${shortTermChange > 0 ? '?승' : '?락'}??것으??상?니?? 중기?으로는 ${mediumTermChange > 0 ? '?승' : '?락'} 추세?보일 것으??측?니?? ?기?으로는 ${longTermChange > 0 ? '긍정?인' : '부?적??} ?망??가지??습?다.`,
+      summary: `${stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲?? ?κ린?곸쑝濡쒕뒗 ${longTermChange > 0 ? '湲띿젙?곸씤' : '遺?뺤쟻??} ?꾨쭩??媛吏怨??덉뒿?덈떎.`,
+      summaryKr: `${stockData.companyNameKr || stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲?? ?κ린?곸쑝濡쒕뒗 ${longTermChange > 0 ? '湲띿젙?곸씤' : '遺?뺤쟻??} ?꾨쭩??媛吏怨??덉뒿?덈떎.`,
       strengths: strengths.slice(0, 5),
       risks: risks.slice(0, 5),
       recommendation: recommendation.en,
@@ -738,12 +716,12 @@ export const generatePrediction = async (
       analysisDetailsKr
     };
   } catch (error) {
-    console.error('?측 ?성 ?류:', error);
-    throw new Error('?측???는 ??류가 발생?습?다.');
+    console.error('?덉륫 ?앹꽦 ?ㅻ쪟:', error);
+    throw new Error('?덉륫???앹꽦?섎뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.');
   }
 };
 
-// ?렌??계산 (간단???형 ?? 기울?
+// ?몃젋??怨꾩궛 (媛꾨떒???좏삎 ?뚭? 湲곗슱湲?
 function calculateTrend(prices: number[]): number {
   if (prices.length < 2) return 0;
   
@@ -760,10 +738,10 @@ function calculateTrend(prices: number[]): number {
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
   const avgPrice = sumY / n;
   
-  // 기울기? 백분?로 변??  return (slope / avgPrice) * 100;
+  // 湲곗슱湲곕? 諛깅텇?⑤줈 蹂??  return (slope / avgPrice) * 100;
 }
 
-// 변?성 계산
+// 蹂?숈꽦 怨꾩궛
 function calculateVolatility(prices: number[]): number {
   if (prices.length < 2) return 0;
   
@@ -779,7 +757,7 @@ function calculateVolatility(prices: number[]): number {
   return Math.sqrt(variance);
 }
 
-// ?측 가??계???성
+// ?덉륫 媛寃??쒓퀎???앹꽦
 function generatePricePredictions(
   currentPrice: number,
   shortTermPrice: number,
@@ -789,19 +767,19 @@ function generatePricePredictions(
   const predictions = [];
   const today = new Date();
   
-  // ?기(1개월) ?측 ?인???성
+  // ?④린(1媛쒖썡) ?덉륫 ?ъ씤???앹꽦
   const shortTerm = new Date(today);
   shortTerm.setMonth(today.getMonth() + 1);
   
-  // 중기(3개월) ?측 ?인???성
+  // 以묎린(3媛쒖썡) ?덉륫 ?ъ씤???앹꽦
   const mediumTerm = new Date(today);
   mediumTerm.setMonth(today.getMonth() + 3);
   
-  // ?기(6개월) ?측 ?인???성
+  // ?κ린(6媛쒖썡) ?덉륫 ?ъ씤???앹꽦
   const longTerm = new Date(today);
   longTerm.setMonth(today.getMonth() + 6);
   
-  // ?측 ?인???이??보간 ?이???성
+  // ?덉륫 ?ъ씤???ъ씠??蹂닿컙 ?곗씠???앹꽦
   const totalDays = Math.round((longTerm.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   
   for (let i = 1; i <= totalDays; i++) {
@@ -812,23 +790,23 @@ function generatePricePredictions(
     const dayRatio = i / totalDays;
     
     if (i <= 30) {
-      // ?1개월: ?재 가격에???기 ?측까? ?형 보간
+      // 泥?1媛쒖썡: ?꾩옱 媛寃⑹뿉???④린 ?덉륫源뚯? ?좏삎 蹂닿컙
       predictedPrice = currentPrice + (shortTermPrice - currentPrice) * (i / 30);
     } else if (i <= 60) {
-      // 1-3개월: ?기 ?측?서 중기 ?측까? ?형 보간
+      // 1-3媛쒖썡: ?④린 ?덉륫?먯꽌 以묎린 ?덉륫源뚯? ?좏삎 蹂닿컙
       predictedPrice = shortTermPrice + (mediumTermPrice - shortTermPrice) * ((i - 30) / 30);
     } else {
-      // 3-6개월: 중기 ?측?서 ?기 ?측까? ?형 보간
+      // 3-6媛쒖썡: 以묎린 ?덉륫?먯꽌 ?κ린 ?덉륫源뚯? ?좏삎 蹂닿컙
       predictedPrice = mediumTermPrice + (longTermPrice - mediumTermPrice) * ((i - 60) / 30);
     }
     
-    // ?간??변?성 추?
+    // ?쎄컙??蹂?숈꽦 異붽?
     const volatility = currentPrice * 0.008 * Math.random();
     predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
     
-    // ?측 가?반올?    const finalPredictedPrice = Number(predictedPrice.toFixed(2));
+    // ?덉륫 媛寃?諛섏삱由?    const finalPredictedPrice = Number(predictedPrice.toFixed(2));
     
-    // 범위 계산 (?측 가격의 ±5%)
+    // 踰붿쐞 怨꾩궛 (?덉륫 媛寃⑹쓽 짹5%)
     const rangeMin = Number((finalPredictedPrice * 0.95).toFixed(2));
     const rangeMax = Number((finalPredictedPrice * 1.05).toFixed(2));
     
@@ -845,98 +823,98 @@ function generatePricePredictions(
   return predictions;
 }
 
-// 강점 ?성
+// 媛뺤젏 ?앹꽦
 function generateStrengths(stockData: StockData, sentiment: number): string[] {
   const strengths = [];
   
   if (stockData.technicalIndicators.rsi < 30) {
-    strengths.push('RSI가 과매??구간???어 반등 가?성???습?다.');
+    strengths.push('RSI媛 怨쇰ℓ??援ш컙???덉뼱 諛섎벑 媛?μ꽦???덉뒿?덈떎.');
   }
   
   if (stockData.technicalIndicators.macd.value > 0) {
-    strengths.push('MACD가 ?수? ?승 모멘???성?고 ?습?다.');
+    strengths.push('MACD媛 ?묒닔濡? ?곸듅 紐⑤찘????뺤꽦?섍퀬 ?덉뒿?덈떎.');
   }
   
   if (stockData.currentPrice > stockData.technicalIndicators.ma50) {
-    strengths.push('?재 가격이 50???동?균???에 ?어 ?기 ?승 추세?보이??습?다.');
+    strengths.push('?꾩옱 媛寃⑹씠 50???대룞?됯퇏???꾩뿉 ?덉뼱 ?④린 ?곸듅 異붿꽭瑜?蹂댁씠怨??덉뒿?덈떎.');
   }
   
   if (stockData.currentPrice > stockData.technicalIndicators.ma200) {
-    strengths.push('?재 가격이 200???동?균???에 ?어 ?기 ?승 추세?보이??습?다.');
+    strengths.push('?꾩옱 媛寃⑹씠 200???대룞?됯퇏???꾩뿉 ?덉뼱 ?κ린 ?곸듅 異붿꽭瑜?蹂댁씠怨??덉뒿?덈떎.');
   }
   
   if (stockData.fundamentals.revenueGrowth > 10) {
-    strengths.push(`매출 ?장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%?? ?장? 보이??습?다.`);
+    strengths.push(`留ㅼ텧 ?깆옣瑜좎씠 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%濡??믪? ?깆옣?몃? 蹂댁씠怨??덉뒿?덈떎.`);
   }
   
   if (stockData.fundamentals.operatingMargin > 20) {
-    strengths.push(`?업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%?? ?익?을 ??고 ?습?다.`);
+    strengths.push(`?곸뾽 留덉쭊??${stockData.fundamentals.operatingMargin.toFixed(1)}%濡??믪? ?섏씡?깆쓣 ?좎??섍퀬 ?덉뒿?덈떎.`);
   }
   
   if (stockData.fundamentals.pe > 0 && stockData.fundamentals.pe < 15) {
-    strengths.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}?? ??으?? ?습?다.`);
+    strengths.push(`P/E 鍮꾩쑉??${stockData.fundamentals.pe.toFixed(1)}濡??곷??곸쑝濡???됯??섏뼱 ?덉뒿?덈떎.`);
   }
   
   if (stockData.fundamentals.dividendYield > 3) {
-    strengths.push(`배당 ?익률이 ${stockData.fundamentals.dividendYield.toFixed(1)}%??정?인 ?익???공?니??`);
+    strengths.push(`諛곕떦 ?섏씡瑜좎씠 ${stockData.fundamentals.dividendYield.toFixed(1)}%濡??덉젙?곸씤 ?섏씡???쒓났?⑸땲??`);
   }
   
-  // 최소 2? 최? 5개의 강점 반환
+  // 理쒖냼 2媛? 理쒕? 5媛쒖쓽 媛뺤젏 諛섑솚
   if (strengths.length < 2) {
-    strengths.push('기술??분석 ? 개선?고 ?는 추세?니??');
-    strengths.push('?장 ?균 ??경쟁???는 ????을 ??고 ?습?다.');
+    strengths.push('湲곗닠??遺꾩꽍 吏?쒓? 媛쒖꽑?섍퀬 ?덈뒗 異붿꽭?낅땲??');
+    strengths.push('?쒖옣 ?됯퇏 ?鍮?寃쎌웳???덈뒗 ?ъ??섏쓣 ?좎??섍퀬 ?덉뒿?덈떎.');
   }
   
   return strengths.slice(0, 5);
 }
 
-// ?험 ?소 ?성
+// ?꾪뿕 ?붿냼 ?앹꽦
 function generateRisks(stockData: StockData, sentiment: number, economicData: EconomicIndicator[]): string[] {
   const risks = [];
   
   if (stockData.technicalIndicators.rsi > 70) {
-    risks.push('RSI가 과매??구간???어 ?기 조정 가?성???습?다.');
+    risks.push('RSI媛 怨쇰ℓ??援ш컙???덉뼱 ?④린 議곗젙 媛?μ꽦???덉뒿?덈떎.');
   }
   
   if (stockData.technicalIndicators.macd.value < 0) {
-    risks.push('MACD가 ?수? ?락 모멘???성?고 ?습?다.');
+    risks.push('MACD媛 ?뚯닔濡? ?섎씫 紐⑤찘????뺤꽦?섍퀬 ?덉뒿?덈떎.');
   }
   
   if (stockData.currentPrice < stockData.technicalIndicators.ma50) {
-    risks.push('?재 가격이 50???동?균???래???어 ?기 ?락 추세?보이??습?다.');
+    risks.push('?꾩옱 媛寃⑹씠 50???대룞?됯퇏???꾨옒???덉뼱 ?④린 ?섎씫 異붿꽭瑜?蹂댁씠怨??덉뒿?덈떎.');
   }
   
   if (stockData.currentPrice < stockData.technicalIndicators.ma200) {
-    risks.push('?재 가격이 200???동?균???래???어 ?기 ?락 추세?보이??습?다.');
+    risks.push('?꾩옱 媛寃⑹씠 200???대룞?됯퇏???꾨옒???덉뼱 ?κ린 ?섎씫 異붿꽭瑜?蹂댁씠怨??덉뒿?덈떎.');
   }
   
   if (stockData.fundamentals.revenueGrowth < 0) {
-    risks.push(`매출 ?장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%?감소 추세?보이??습?다.`);
+    risks.push(`留ㅼ텧 ?깆옣瑜좎씠 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%濡?媛먯냼 異붿꽭瑜?蹂댁씠怨??덉뒿?덈떎.`);
   }
   
   if (stockData.fundamentals.operatingMargin < 10) {
-    risks.push(`?업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%???? ?익?을 보이??습?다.`);
+    risks.push(`?곸뾽 留덉쭊??${stockData.fundamentals.operatingMargin.toFixed(1)}%濡???? ?섏씡?깆쓣 蹂댁씠怨??덉뒿?덈떎.`);
   }
   
   if (stockData.fundamentals.pe > 30) {
-    risks.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}?? ??으?고평가?어 ?습?다.`);
+    risks.push(`P/E 鍮꾩쑉??${stockData.fundamentals.pe.toFixed(1)}濡??곷??곸쑝濡?怨좏룊媛?섏뼱 ?덉뒿?덈떎.`);
   }
   
-  const interestRate = economicData.find(item => item.name.includes('기?금리'));
+  const interestRate = economicData.find(item => item.name.includes('湲곗?湲덈━'));
   if (interestRate && interestRate.change > 0) {
-    risks.push('금리 ?승 ?경? 주식 ?장??부?적???향??미칠 ???습?다.');
+    risks.push('湲덈━ ?곸듅 ?섍꼍? 二쇱떇 ?쒖옣??遺?뺤쟻???곹뼢??誘몄튌 ???덉뒿?덈떎.');
   }
   
-  // 최소 2? 최? 5개의 ?험 ?소 반환
+  // 理쒖냼 2媛? 理쒕? 5媛쒖쓽 ?꾪뿕 ?붿냼 諛섑솚
   if (risks.length < 2) {
-    risks.push('?장 변?성??증???경우 주? ?락 ?험???습?다.');
-    risks.push('경쟁 ?화?한 ?장 ?유??감소 가?성???습?다.');
+    risks.push('?쒖옣 蹂?숈꽦??利앷???寃쎌슦 二쇨? ?섎씫 ?꾪뿕???덉뒿?덈떎.');
+    risks.push('寃쎌웳 ?ы솕濡??명븳 ?쒖옣 ?먯쑀??媛먯냼 媛?μ꽦???덉뒿?덈떎.');
   }
   
   return risks.slice(0, 5);
 }
 
-// ?자 추천 ?성
+// ?ъ옄 異붿쿇 ?앹꽦
 function generateRecommendation(sentiment: number, stockData: StockData): { en: string; kr: string } {
   const companyName = stockData.companyName;
   const companyNameKr = stockData.companyNameKr || stockData.companyName;
@@ -946,37 +924,37 @@ function generateRecommendation(sentiment: number, stockData: StockData): { en: 
   
   if (sentiment > 0.5) {
     en = `${companyName} is showing positive signals in both technical and fundamental analysis, recommending a buy. It is particularly suitable for long-term investors.`;
-    kr = `${companyNameKr}?(?? ?재 기술? 기본?분석 모두 긍정?인 ?호?보이??어 매수 추천?니?? ?히 ?기 ?자?에?합??종목?로 ?단?니??`;
+    kr = `${companyNameKr}?(?? ?꾩옱 湲곗닠?? 湲곕낯??遺꾩꽍 紐⑤몢 湲띿젙?곸씤 ?좏샇瑜?蹂댁씠怨??덉뼱 留ㅼ닔 異붿쿇?⑸땲?? ?뱁엳 ?κ린 ?ъ옄?먯뿉寃??곹빀??醫낅ぉ?쇰줈 ?먮떒?⑸땲??`;
   } else if (sentiment > 0.2) {
     en = `${companyName} is showing a moderate upward trend, making a small, divided buying strategy appropriate. It would be good to build a position while watching the market situation.`;
-    kr = `${companyNameKr}?(?? ?만???승 추세?보이??어 ?액 분할 매수 ?략???합?니?? ?장 ?황?주시?며 ????을 구축?는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?(?? ?꾨쭔???곸듅 異붿꽭瑜?蹂댁씠怨??덉뼱 ?뚯븸 遺꾪븷 留ㅼ닔 ?꾨왂???곹빀?⑸땲?? ?쒖옣 ?곹솴??二쇱떆?섎ŉ ?ъ??섏쓣 援ъ텞?섎뒗 寃껋씠 醫뗪쿋?듬땲??`;
   } else if (sentiment > -0.2) {
     en = `${companyName} is currently showing neutral signals, so we recommend watching. It would be good to make an investment decision after waiting for additional momentum or corporate events.`;
-    kr = `${companyNameKr}?(?? ?재 중립?인 ?호?보이??어 관망을 추천?니?? 추??인 모멘?나 기업 ?벤? 기다????자 결정???는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?(?? ?꾩옱 以묐┰?곸씤 ?좏샇瑜?蹂댁씠怨??덉뼱 愿留앹쓣 異붿쿇?⑸땲?? 異붽??곸씤 紐⑤찘??대굹 湲곗뾽 ?대깽?몃? 湲곕떎由????ъ옄 寃곗젙???섎뒗 寃껋씠 醫뗪쿋?듬땲??`;
   } else if (sentiment > -0.5) {
     en = `${companyName} has detected a weak signal, so it is time to refrain from new purchases and consider clearing some positions if you are holding them.`;
-    kr = `${companyNameKr}?(?? ?세 ?호가 감?어 ?규 매수???제?고 보유 중인 경우 ?? ? ?????리?고려?볼 ?점?니??`;
+    kr = `${companyNameKr}?(?? ?쎌꽭 ?좏샇媛 媛먯??섏뼱 ?좉퇋 留ㅼ닔???먯젣?섍퀬 蹂댁쑀 以묒씤 寃쎌슦 ?쇰? ?ъ????뺣━瑜?怨좊젮?대낵 ?쒖젏?낅땲??`;
   } else {
     en = `${companyName} is currently showing negative signals in both technical and fundamental analysis, recommending a sell or wait. It would be good to refrain from new investments until market conditions improve.`;
-    kr = `${companyNameKr}?(?? ?재 기술? 기본?분석 모두 부?적???호?보이??어 매도 ?는 관망을 추천?니?? ?장 ?황?개선???까지 ?규 ?자???제?는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?(?? ?꾩옱 湲곗닠?? 湲곕낯??遺꾩꽍 紐⑤몢 遺?뺤쟻???좏샇瑜?蹂댁씠怨??덉뼱 留ㅻ룄 ?먮뒗 愿留앹쓣 異붿쿇?⑸땲?? ?쒖옣 ?곹솴??媛쒖꽑???뚭퉴吏 ?좉퇋 ?ъ옄???먯젣?섎뒗 寃껋씠 醫뗪쿋?듬땲??`;
   }
   
   return { en, kr };
 }
 
-// 모의 주식 ?이???성
+// 紐⑥쓽 二쇱떇 ?곗씠???앹꽦
 export function generateMockStockData(symbol: string): StockData {
   try {
-    // ?사 ?보 가?오?    const companyInfo = getCompanyInfo(symbol);
+    // ?뚯궗 ?뺣낫 媛?몄삤湲?    const companyInfo = getCompanyInfo(symbol);
     
-    // 모의 ?이???성
+    // 紐⑥쓽 ?곗씠???앹꽦
     const currentPrice = 100 + Math.random() * 900;
     const priceChange = Math.random() * 10 - 5; // -5% ~ +5%
     
-    // 과거 주? ?이???성
+    // 怨쇨굅 二쇨? ?곗씠???앹꽦
     const historicalPrices = generateMockHistoricalPrices(currentPrice);
     
-    // 기술??지??계산
+    // 湲곗닠??吏??怨꾩궛
     const technicalIndicators = {
       rsi: 50 + Math.random() * 20,
       macd: {
@@ -1011,11 +989,10 @@ export function generateMockStockData(symbol: string): StockData {
       ]
     };
     
-    // 차트 ?턴 ?성
+    // 李⑦듃 ?⑦꽩 ?앹꽦
     const patterns = generateChartPatterns();
     
-    // 모의 ?스 ?성
-    // 모의 ?�스 ?�성
+    // 紐⑥쓽 ?댁뒪 ?앹꽦
     const news = generateMockNews(symbol, companyInfo.companyName);
     
     return {
@@ -1071,16 +1048,16 @@ export function generateMockStockData(symbol: string): StockData {
       upcomingEvents: [
         {
           date: getRandomFutureDate(30),
-          type: '?�적 발표',
-          title: '분기�??�적 발표',
-          description: `${companyInfo.companyName}??분기�??�적 발표`,
+          type: '?ㅼ쟻 諛쒗몴',
+          title: '遺꾧린蹂??ㅼ쟻 諛쒗몴',
+          description: `${companyInfo.companyName}??遺꾧린蹂??ㅼ쟻 諛쒗몴`,
           impact: 'high'
         },
         {
           date: getRandomFutureDate(45),
-          type: '?�자??컨퍼?�스',
-          title: '?��? ?�자??컨퍼?�스',
-          description: '?��? ?�자??컨퍼?�스 �??�제??발표',
+          type: '?ъ옄??而⑦띁?곗뒪',
+          title: '?곕? ?ъ옄??而⑦띁?곗뒪',
+          description: '?곕? ?ъ옄??而⑦띁?곗뒪 諛??좎젣??諛쒗몴',
           impact: 'medium'
         }
       ],
@@ -1094,16 +1071,16 @@ export function generateMockStockData(symbol: string): StockData {
       lastUpdated: new Date().toISOString()
     };
   } catch (error) {
-    // 모의 ?�이???�성 �??�류 발생 ??최소?�의 ?�이??반환
-    console.error('모의 주식 ?�이???�성 ?�류:', error);
+    // 紐⑥쓽 ?곗씠???앹꽦 以??ㅻ쪟 諛쒖깮 ??理쒖냼?쒖쓽 ?곗씠??諛섑솚
+    console.error('紐⑥쓽 二쇱떇 ?곗씠???앹꽦 ?ㅻ쪟:', error);
     
-    // 최소?�의 ?�수 ?�이?�만 ?�함??기본 객체 반환
+    // 理쒖냼?쒖쓽 ?꾩닔 ?곗씠?곕쭔 ?ы븿??湲곕낯 媛앹껜 諛섑솚
     return {
       ticker: symbol,
       companyName: `${symbol} Inc.`,
-      companyNameKr: `${symbol} 주식?�사`,
+      companyNameKr: `${symbol} 二쇱떇?뚯궗`,
       description: `${symbol} is a publicly traded company.`,
-      descriptionKr: `${symbol}?�(?? 공개?�으�?거래?�는 ?�사?�니??`,
+      descriptionKr: `${symbol}?(?? 怨듦컻?곸쑝濡?嫄곕옒?섎뒗 ?뚯궗?낅땲??`,
       sector: 'Technology',
       industry: 'Software',
       currentPrice: 100,
@@ -1127,7 +1104,18 @@ export function generateMockStockData(symbol: string): StockData {
           width: 0
         },
         ma50: 0,
-        ma200: 0
+        ma200: 0,
+        ema20: 0,
+        ema50: 0,
+        atr: 0,
+        obv: 0,
+        stochastic: {
+          k: 0,
+          d: 0
+        },
+        adx: 0,
+        supportLevels: [],
+        resistanceLevels: []
       },
       fundamentals: {
         pe: 15,
@@ -1177,97 +1165,97 @@ export function generateMockStockData(symbol: string): StockData {
   }
 }
 
-// ?�사 ?�보 가?�오�?(모의 ?�이??
+// ?뚯궗 ?뺣낫 媛?몄삤湲?(紐⑥쓽 ?곗씠??
 function getCompanyInfo(symbol: string) {
   const companies: Record<string, { companyName: string, companyNameKr: string, description: string, descriptionKr: string, sector: string, industry: string }> = {
     'AAPL': {
       companyName: 'Apple Inc.',
-      companyNameKr: '?�플',
+      companyNameKr: '?좏뵆',
       description: 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.',
-      descriptionKr: '?�플?� ???�계?�으�??�마?�폰, 개인??컴퓨?? ?�블�? ?�어?�블 기기 �??�세?�리�??�계, ?�조 �??�매?�는 기업?�니??',
+      descriptionKr: '?좏뵆? ???멸퀎?곸쑝濡??ㅻ쭏?명룿, 媛쒖씤??而댄벂?? ?쒕툝由? ?⑥뼱?щ툝 湲곌린 諛??≪꽭?쒕━瑜??ㅺ퀎, ?쒖“ 諛??먮ℓ?섎뒗 湲곗뾽?낅땲??',
       sector: 'Technology',
       industry: 'Consumer Electronics'
     },
     'MSFT': {
       companyName: 'Microsoft Corporation',
-      companyNameKr: '마이?�로?�프??,
+      companyNameKr: '留덉씠?щ줈?뚰봽??,
       description: 'Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide.',
-      descriptionKr: '마이?�로?�프?�는 ???�계?�으�??�프?�웨?? ?�비?? 기기 �??�루?�을 개발, ?�이?�스 �?지?�하??기업?�니??',
+      descriptionKr: '留덉씠?щ줈?뚰봽?몃뒗 ???멸퀎?곸쑝濡??뚰봽?몄썾?? ?쒕퉬?? 湲곌린 諛??붾（?섏쓣 媛쒕컻, ?쇱씠?좎뒪 諛?吏?먰븯??湲곗뾽?낅땲??',
       sector: 'Technology',
-      industry: 'Software?�Infrastructure'
+      industry: 'Software?봊nfrastructure'
     },
     'GOOGL': {
       companyName: 'Alphabet Inc.',
-      companyNameKr: '?�파�?,
+      companyNameKr: '?뚰뙆踰?,
       description: 'Alphabet Inc. provides various products and platforms in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America.',
-      descriptionKr: '?�파벳�? 미국, ?�럽, 중동, ?�프리카, ?�시???�평?? 캐나??�??�틴 ?�메리카?�서 ?�양???�품�??�랫?�을 ?�공?�는 기업?�니??',
+      descriptionKr: '?뚰뙆踰녹? 誘멸뎅, ?좊읇, 以묐룞, ?꾪봽由ъ뭅, ?꾩떆???쒗룊?? 罹먮굹??諛??쇳떞 ?꾨찓由ъ뭅?먯꽌 ?ㅼ뼇???쒗뭹怨??뚮옯?쇱쓣 ?쒓났?섎뒗 湲곗뾽?낅땲??',
       sector: 'Technology',
       industry: 'Internet Content & Information'
     },
     'AMZN': {
       companyName: 'Amazon.com, Inc.',
-      companyNameKr: '?�마존닷�?,
+      companyNameKr: '?꾨쭏議대떣而?,
       description: 'Amazon.com, Inc. engages in the retail sale of consumer products and subscriptions in North America and internationally.',
-      descriptionKr: '?�마존닷컴�? 북�? �?�?��?�으�??�비???�품???�매 ?�매 �?구독 ?�비?��? ?�공?�는 기업?�니??',
+      descriptionKr: '?꾨쭏議대떣而댁? 遺곷? 諛?援?젣?곸쑝濡??뚮퉬???쒗뭹???뚮ℓ ?먮ℓ 諛?援щ룆 ?쒕퉬?ㅻ? ?쒓났?섎뒗 湲곗뾽?낅땲??',
       sector: 'Consumer Cyclical',
       industry: 'Internet Retail'
     },
     'META': {
       companyName: 'Meta Platforms, Inc.',
-      companyNameKr: '메�? ?�랫?�스',
+      companyNameKr: '硫뷀? ?뚮옯?쇱뒪',
       description: 'Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, personal computers, virtual reality headsets, and in-home devices worldwide.',
-      descriptionKr: '메�? ?�랫?�스??모바??기기, 개인??컴퓨?? 가???�실 ?�드??�?가?�용 기기�??�해 ???�계?�으�??�람?�이 친구 �?가족과 ?�결?�고 공유?????�는 ?�품??개발?�는 기업?�니??',
+      descriptionKr: '硫뷀? ?뚮옯?쇱뒪??紐⑤컮??湲곌린, 媛쒖씤??而댄벂?? 媛???꾩떎 ?ㅻ뱶??諛?媛?뺤슜 湲곌린瑜??듯빐 ???멸퀎?곸쑝濡??щ엺?ㅼ씠 移쒓뎄 諛?媛議깃낵 ?곌껐?섍퀬 怨듭쑀?????덈뒗 ?쒗뭹??媛쒕컻?섎뒗 湲곗뾽?낅땲??',
       sector: 'Technology',
       industry: 'Internet Content & Information'
     },
     'TSLA': {
       companyName: 'Tesla, Inc.',
-      companyNameKr: '?�슬??,
+      companyNameKr: '?뚯뒳??,
       description: 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems in the United States, China, and internationally.',
-      descriptionKr: '?�슬?�는 미국, 중국 �?�?��?�으�??�기 ?�동�? ?�너지 ?�성 �??�???�스?�을 ?�계, 개발, ?�조, ?��? �??�매?�는 기업?�니??',
+      descriptionKr: '?뚯뒳?쇰뒗 誘멸뎅, 以묎뎅 諛?援?젣?곸쑝濡??꾧린 ?먮룞李? ?먮꼫吏 ?앹꽦 諛?????쒖뒪?쒖쓣 ?ㅺ퀎, 媛쒕컻, ?쒖“, ?꾨? 諛??먮ℓ?섎뒗 湲곗뾽?낅땲??',
       sector: 'Consumer Cyclical',
       industry: 'Auto Manufacturers'
     },
     'NVDA': {
       companyName: 'NVIDIA Corporation',
-      companyNameKr: '?�비?�아',
+      companyNameKr: '?붾퉬?붿븘',
       description: 'NVIDIA Corporation provides graphics, and compute and networking solutions in the United States, Taiwan, China, and internationally.',
-      descriptionKr: '?�비?�아??미국, ?��? 중국 �?�?��?�으�?그래?? 컴퓨??�??�트?�킹 ?�루?�을 ?�공?�는 기업?�니??',
+      descriptionKr: '?붾퉬?붿븘??誘멸뎅, ?留? 以묎뎅 諛?援?젣?곸쑝濡?洹몃옒?? 而댄벂??諛??ㅽ듃?뚰궧 ?붾（?섏쓣 ?쒓났?섎뒗 湲곗뾽?낅땲??',
       sector: 'Technology',
       industry: 'Semiconductors'
     },
     'NFLX': {
       companyName: 'Netflix, Inc.',
-      companyNameKr: '?�플�?��',
+      companyNameKr: '?룻뵆由?뒪',
       description: 'Netflix, Inc. provides entertainment services. It offers TV series, documentaries, feature films, and mobile games across various genres and languages.',
-      descriptionKr: '?�플�?��???�양???�르?� ?�어�?TV ?�리�? ?�큐멘터�? ?�화 �?모바??게임???�공?�는 ?�터?�인먼트 ?�비??기업?�니??',
+      descriptionKr: '?룻뵆由?뒪???ㅼ뼇???λⅤ? ?몄뼱濡?TV ?쒕━利? ?ㅽ걧硫섑꽣由? ?곹솕 諛?紐⑤컮??寃뚯엫???쒓났?섎뒗 ?뷀꽣?뚯씤癒쇳듃 ?쒕퉬??湲곗뾽?낅땲??',
       sector: 'Communication Services',
       industry: 'Entertainment'
     },
     'JPM': {
       companyName: 'JPMorgan Chase & Co.',
-      companyNameKr: 'JP모건 체이??,
+      companyNameKr: 'JP紐④굔 泥댁씠??,
       description: 'JPMorgan Chase & Co. operates as a financial services company worldwide. It operates through four segments: Consumer & Community Banking, Corporate & Investment Bank, Commercial Banking, and Asset & Wealth Management.',
-      descriptionKr: 'JP모건 체이?�는 ???�계?�으�?금융 ?�비?��? ?�공?�는 기업?�로, ?�비??�?커�??�티 뱅킹, 기업 �??�자 ?�?? ?�업 뱅킹, ?�산 �??�산 관�?????가지 부문으�??�영?�니??',
+      descriptionKr: 'JP紐④굔 泥댁씠?ㅻ뒗 ???멸퀎?곸쑝濡?湲덉쑖 ?쒕퉬?ㅻ? ?쒓났?섎뒗 湲곗뾽?쇰줈, ?뚮퉬??諛?而ㅻ??덊떚 諭낇궧, 湲곗뾽 諛??ъ옄 ??? ?곸뾽 諭낇궧, ?먯궛 諛??먯궛 愿由?????媛吏 遺臾몄쑝濡??댁쁺?⑸땲??',
       sector: 'Financial Services',
-      industry: 'Banks?�Diversified'
+      industry: 'Banks?봁iversified'
     },
     'KO': {
       companyName: 'The Coca-Cola Company',
-      companyNameKr: '코카콜라',
+      companyNameKr: '肄붿뭅肄쒕씪',
       description: 'The Coca-Cola Company, a beverage company, manufactures, markets, and sells various nonalcoholic beverages worldwide.',
-      descriptionKr: '코카콜라?????�계?�으�??�양??비알코올 ?�료�??�조, 마�???�??�매?�는 ?�료 기업?�니??',
+      descriptionKr: '肄붿뭅肄쒕씪?????멸퀎?곸쑝濡??ㅼ뼇??鍮꾩븣肄붿삱 ?뚮즺瑜??쒖“, 留덉???諛??먮ℓ?섎뒗 ?뚮즺 湲곗뾽?낅땲??',
       sector: 'Consumer Defensive',
-      industry: 'Beverages?�Non-Alcoholic'
+      industry: 'Beverages?봏on-Alcoholic'
     }
   };
   
-  // 기본 ?�사 ?�보 (?�청???�볼???�는 경우)
+  // 湲곕낯 ?뚯궗 ?뺣낫 (?붿껌???щ낵???녿뒗 寃쎌슦)
   const defaultCompany = {
     companyName: `${symbol} Corporation`,
-    companyNameKr: `${symbol} 코퍼?�이??,
+    companyNameKr: `${symbol} 肄뷀띁?덉씠??,
     description: `${symbol} is a publicly traded company on the stock market.`,
-    descriptionKr: `${symbol}?�(?? 주식 ?�장???�장??기업?�니??`,
+    descriptionKr: `${symbol}?(?? 二쇱떇 ?쒖옣???곸옣??湲곗뾽?낅땲??`,
     sector: 'Miscellaneous',
     industry: 'Diversified'
   };
@@ -1275,7 +1263,7 @@ function getCompanyInfo(symbol: string) {
   return companies[symbol] || defaultCompany;
 }
 
-// 미래 ?�짜 ?�성 (최�? ?�수 ?�내)
+// 誘몃옒 ?좎쭨 ?앹꽦 (理쒕? ?쇱닔 ?대궡)
 function getRandomFutureDate(maxDays: number): string {
   const today = new Date();
   const futureDate = new Date(today);
@@ -1283,53 +1271,53 @@ function getRandomFutureDate(maxDays: number): string {
   return futureDate.toISOString().split('T')[0];
 }
 
-// 모의 ?�스 ?�성
+// 紐⑥쓽 ?댁뒪 ?앹꽦
 function generateMockNews(symbol: string, companyName: string) {
   const newsTemplates = [
     {
-      title: `${companyName}, ?�상�??�회?�는 분기 ?�적 발표`,
+      title: `${companyName}, ?덉긽移??곹쉶?섎뒗 遺꾧린 ?ㅼ쟻 諛쒗몴`,
       source: 'Financial Times',
       date: getRandomPastDate(10),
       url: '#',
       sentiment: 'positive'
     },
     {
-      title: `${companyName}, ?�제??출시�??�장 ?�유???��? ?�망`,
+      title: `${companyName}, ?좎젣??異쒖떆濡??쒖옣 ?먯쑀???뺣? ?꾨쭩`,
       source: 'Bloomberg',
       date: getRandomPastDate(5),
       url: '#',
       sentiment: 'positive'
     },
     {
-      title: `분석가?? ${companyName} 주�? 목표�??�향 조정`,
+      title: `遺꾩꽍媛?? ${companyName} 二쇨? 紐⑺몴移??곹뼢 議곗젙`,
       source: 'CNBC',
       date: getRandomPastDate(3),
       url: '#',
       sentiment: 'positive'
     },
     {
-      title: `${companyName}, 경쟁?��????�허 분쟁 ?�결`,
+      title: `${companyName}, 寃쎌웳?ъ????뱁뿀 遺꾩웳 ?닿껐`,
       source: 'Reuters',
       date: getRandomPastDate(7),
       url: '#',
       sentiment: 'neutral'
     },
     {
-      title: `${companyName}, ?�규 ?�장 진출 계획 발표`,
+      title: `${companyName}, ?좉퇋 ?쒖옣 吏꾩텧 怨꾪쉷 諛쒗몴`,
       source: 'Wall Street Journal',
       date: getRandomPastDate(2),
       url: '#',
       sentiment: 'positive'
     },
     {
-      title: `${companyName}, 공급�?문제�??�산 차질 ?�려`,
+      title: `${companyName}, 怨듦툒留?臾몄젣濡??앹궛 李⑥쭏 ?곕젮`,
       source: 'MarketWatch',
       date: getRandomPastDate(4),
       url: '#',
       sentiment: 'negative'
     },
     {
-      title: `${companyName}, 지?��??�성 ?�니?�티�?발표`,
+      title: `${companyName}, 吏?띻??μ꽦 ?대땲?뷀떚釉?諛쒗몴`,
       source: 'Forbes',
       date: getRandomPastDate(6),
       url: '#',
@@ -1337,10 +1325,10 @@ function generateMockNews(symbol: string, companyName: string) {
     }
   ];
   
-  // 3-5개의 ?�스 ??�� ?�택
+  // 3-5媛쒖쓽 ?댁뒪 ??ぉ ?좏깮
   const newsCount = 3 + Math.floor(Math.random() * 3);
   const selectedNews = [];
-  const availableNews = [...newsTemplates]; // 복사�??�성
+  const availableNews = [...newsTemplates]; // 蹂듭궗蹂??앹꽦
   
   for (let i = 0; i < newsCount; i++) {
     if (availableNews.length === 0) break;
@@ -1353,7 +1341,7 @@ function generateMockNews(symbol: string, companyName: string) {
   return selectedNews;
 }
 
-// 과거 ?�짜 ?�성 (최�? ?�수 ?�내)
+// 怨쇨굅 ?좎쭨 ?앹꽦 (理쒕? ?쇱닔 ?대궡)
 function getRandomPastDate(maxDays: number): string {
   const today = new Date();
   const pastDate = new Date(today);
@@ -1361,71 +1349,71 @@ function getRandomPastDate(maxDays: number): string {
   return pastDate.toISOString().split('T')[0];
 }
 
-// 차트 ?�턴 ?�성
+// 李⑦듃 ?⑦꽩 ?앹꽦
 function generateChartPatterns() {
   const patternTemplates = [
     {
-      name: '?�드?�숄??,
-      description: '?�드?�숄???�턴?� ??개의 ?�크�?구성?�며, 가?�데 ?�크가 ?�쪽 ?�크보다 ?�습?�다. ?�반?�으�??�락 반전 ?�호�??�석?�니??',
-      descriptionKr: '?�드?�숄???�턴?� ??개의 ?�크�?구성?�며, 가?�데 ?�크가 ?�쪽 ?�크보다 ?�습?�다. ?�반?�으�??�락 반전 ?�호�??�석?�니??',
+      name: '?ㅻ뱶?ㅼ늻??,
+      description: '?ㅻ뱶?ㅼ늻???⑦꽩? ??媛쒖쓽 ?쇳겕濡?援ъ꽦?섎ŉ, 媛?대뜲 ?쇳겕媛 ?묒そ ?쇳겕蹂대떎 ?믪뒿?덈떎. ?쇰컲?곸쑝濡??섎씫 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
+      descriptionKr: '?ㅻ뱶?ㅼ늻???⑦꽩? ??媛쒖쓽 ?쇳겕濡?援ъ꽦?섎ŉ, 媛?대뜲 ?쇳겕媛 ?묒そ ?쇳겕蹂대떎 ?믪뒿?덈떎. ?쇰컲?곸쑝濡??섎씫 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
       bullish: false,
       confidence: 75 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '??��?�앤?�더',
-      description: '??��?�앤?�더 ?�턴?� ??개의 ?�?�으�?구성?�며, 가?�데 ?�?�이 ?�쪽 ?�?�보????��?�다. ?�반?�으�??�승 반전 ?�호�??�석?�니??',
-      descriptionKr: '??��?�앤?�더 ?�턴?� ??개의 ?�?�으�?구성?�며, 가?�데 ?�?�이 ?�쪽 ?�?�보????��?�다. ?�반?�으�??�승 반전 ?�호�??�석?�니??',
+      name: '??뿤?쒖븻?꾨뜑',
+      description: '??뿤?쒖븻?꾨뜑 ?⑦꽩? ??媛쒖쓽 ??먯쑝濡?援ъ꽦?섎ŉ, 媛?대뜲 ??먯씠 ?묒そ ??먮낫????뒿?덈떎. ?쇰컲?곸쑝濡??곸듅 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
+      descriptionKr: '??뿤?쒖븻?꾨뜑 ?⑦꽩? ??媛쒖쓽 ??먯쑝濡?援ъ꽦?섎ŉ, 媛?대뜲 ??먯씠 ?묒そ ??먮낫????뒿?덈떎. ?쇰컲?곸쑝濡??곸듅 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
       bullish: true,
       confidence: 75 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '?�블 ??,
-      description: '?�블 ???�턴?� ??개의 비슷???�이???�크�?구성?�니?? ?�반?�으�??�락 반전 ?�호�??�석?�니??',
-      descriptionKr: '?�블 ???�턴?� ??개의 비슷???�이???�크�?구성?�니?? ?�반?�으�??�락 반전 ?�호�??�석?�니??',
+      name: '?붾툝 ??,
+      description: '?붾툝 ???⑦꽩? ??媛쒖쓽 鍮꾩듂???믪씠???쇳겕濡?援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??섎씫 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
+      descriptionKr: '?붾툝 ???⑦꽩? ??媛쒖쓽 鍮꾩듂???믪씠???쇳겕濡?援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??섎씫 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
       bullish: false,
       confidence: 70 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '?�블 바�?',
-      description: '?�블 바�? ?�턴?� ??개의 비슷???�?�으�?구성?�니?? ?�반?�으�??�승 반전 ?�호�??�석?�니??',
-      descriptionKr: '?�블 바�? ?�턴?� ??개의 비슷???�?�으�?구성?�니?? ?�반?�으�??�승 반전 ?�호�??�석?�니??',
+      name: '?붾툝 諛뷀?',
+      description: '?붾툝 諛뷀? ?⑦꽩? ??媛쒖쓽 鍮꾩듂????먯쑝濡?援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??곸듅 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
+      descriptionKr: '?붾툝 諛뷀? ?⑦꽩? ??媛쒖쓽 鍮꾩듂????먯쑝濡?援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??곸듅 諛섏쟾 ?좏샇濡??댁꽍?⑸땲??',
       bullish: true,
       confidence: 70 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '?�각???�턴',
-      description: '?�각???�턴?� 가격이 ?�점 좁아지??범위 ?�에???�직이??것을 ?��??�니?? 방향???�파가 ?�상?�니??',
-      descriptionKr: '?�각???�턴?� 가격이 ?�점 좁아지??범위 ?�에???�직이??것을 ?��??�니?? 방향???�파가 ?�상?�니??',
+      name: '?쇨컖???⑦꽩',
+      description: '?쇨컖???⑦꽩? 媛寃⑹씠 ?먯젏 醫곸븘吏??踰붿쐞 ?댁뿉???吏곸씠??寃껋쓣 ?섑??낅땲?? 諛⑺뼢???뚰뙆媛 ?덉긽?⑸땲??',
+      descriptionKr: '?쇨컖???⑦꽩? 媛寃⑹씠 ?먯젏 醫곸븘吏??踰붿쐞 ?댁뿉???吏곸씠??寃껋쓣 ?섑??낅땲?? 諛⑺뼢???뚰뙆媛 ?덉긽?⑸땲??',
       bullish: Math.random() > 0.5,
       confidence: 65 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '?�래�??�턴',
-      description: '?�래�??�턴?� 짧�? 기간 ?�안???�합 ???�전 추세가 계속??것으�??�상?�는 ?�턴?�니??',
-      descriptionKr: '?�래�??�턴?� 짧�? 기간 ?�안???�합 ???�전 추세가 계속??것으�??�상?�는 ?�턴?�니??',
+      name: '?뚮옒洹??⑦꽩',
+      description: '?뚮옒洹??⑦꽩? 吏㏃? 湲곌컙 ?숈븞???듯빀 ???댁쟾 異붿꽭媛 怨꾩냽??寃껋쑝濡??덉긽?섎뒗 ?⑦꽩?낅땲??',
+      descriptionKr: '?뚮옒洹??⑦꽩? 吏㏃? 湲곌컙 ?숈븞???듯빀 ???댁쟾 異붿꽭媛 怨꾩냽??寃껋쑝濡??덉긽?섎뒗 ?⑦꽩?낅땲??',
       bullish: Math.random() > 0.5,
       confidence: 65 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
     {
-      name: '컵앤?�들',
-      description: '컵앤?�들 ?�턴?� U?�형 컵과 �??�른쪽의 ?��? ?�락(?�들)?�로 구성?�니?? ?�반?�으�??�승 ?�호�??�석?�니??',
-      descriptionKr: '컵앤?�들 ?�턴?� U?�형 컵과 �??�른쪽의 ?��? ?�락(?�들)?�로 구성?�니?? ?�반?�으�??�승 ?�호�??�석?�니??',
+      name: '而듭븻?몃뱾',
+      description: '而듭븻?몃뱾 ?⑦꽩? U?먰삎 而듦낵 洹??ㅻⅨ履쎌쓽 ?묒? ?섎씫(?몃뱾)?쇰줈 援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??곸듅 ?좏샇濡??댁꽍?⑸땲??',
+      descriptionKr: '而듭븻?몃뱾 ?⑦꽩? U?먰삎 而듦낵 洹??ㅻⅨ履쎌쓽 ?묒? ?섎씫(?몃뱾)?쇰줈 援ъ꽦?⑸땲?? ?쇰컲?곸쑝濡??곸듅 ?좏샇濡??댁꽍?⑸땲??',
       bullish: true,
       confidence: 70 + Math.floor(Math.random() * 20),
       formationDate: getRandomPastDate(30)
     },
   ];
 
-  // 0-3개의 ?�턴???�덤?�게 ?�택
+  // 0-3媛쒖쓽 ?⑦꽩???쒕뜡?섍쾶 ?좏깮
   const patternCount = Math.floor(Math.random() * 3);
   const patterns = [];
-  const availablePatterns = [...patternTemplates]; // 복사�??�성
+  const availablePatterns = [...patternTemplates]; // 蹂듭궗蹂??앹꽦
 
   for (let i = 0; i < patternCount; i++) {
     if (availablePatterns.length === 0) break;
@@ -1438,81 +1426,81 @@ function generateChartPatterns() {
   return patterns;
 }
 
-// 모의 경제 지???�이???�성
+// 紐⑥쓽 寃쎌젣 吏???곗씠???앹꽦
 function generateAdditionalMockEconomicData(): EconomicIndicator[] {
   return [
     {
       name: 'GDP Growth Rate',
-      nameKr: 'GDP ?�장�?,
+      nameKr: 'GDP ?깆옣瑜?,
       value: 2.1,
       unit: '%',
       change: 0.3,
       previousPeriod: '2023-Q2',
-      description: '�?��총생???�장�?,
+      description: '援?궡珥앹깮???깆옣瑜?,
       impact: 'positive' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Unemployment Rate',
-      nameKr: '?�업�?,
+      nameKr: '?ㅼ뾽瑜?,
       value: 3.8,
       unit: '%',
       change: -0.1,
       previousPeriod: '2023-08',
-      description: '미국 ?�업�?,
+      description: '誘멸뎅 ?ㅼ뾽瑜?,
       impact: 'negative' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Consumer Price Index',
-      nameKr: '?�비?�물가지??,
+      nameKr: '?뚮퉬?먮Ъ媛吏??,
       value: 3.2,
       unit: '%',
       change: -0.2,
       previousPeriod: '2023-08',
-      description: '?�비?�물가지??변?�율',
+      description: '?뚮퉬?먮Ъ媛吏??蹂?붿쑉',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Federal Funds Rate',
-      nameKr: '기�?금리',
+      nameKr: '湲곗?湲덈━',
       value: 5.25,
       unit: '%',
       change: 0,
       previousPeriod: '2023-08',
-      description: '�??�방준비제??기�?금리',
+      description: '誘??곕갑以鍮꾩젣??湲곗?湲덈━',
       impact: 'negative' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'Industrial Production',
-      nameKr: '?�업?�산지??,
+      nameKr: '?곗뾽?앹궛吏??,
       value: 0.4,
       unit: '%',
       change: 0.7,
       previousPeriod: '2023-08',
-      description: '?�업?�산지??변?�율',
+      description: '?곗뾽?앹궛吏??蹂?붿쑉',
       impact: 'positive' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     },
     {
       name: 'KRW/USD Exchange Rate',
-      nameKr: '???�러 ?�율',
+      nameKr: '???щ윭 ?섏쑉',
       value: 1350.25,
       unit: 'KRW',
       change: 2.1,
       previousPeriod: '2023-09-01',
-      description: '???�러 ?�율',
+      description: '???щ윭 ?섏쑉',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?�이??'
+      source: 'FRED (紐⑥쓽 ?곗씠??'
     }
   ];
 }
 
-// 목업 ?�측 결과 ?�성
+// 紐⑹뾽 ?덉륫 寃곌낵 ?앹꽦
 function generateMockPrediction(ticker: string, currentPrice: number): PredictionResult {
-  // ?�기, 중기, ?�기 ?�측 가�??�성
+  // ?④린, 以묎린, ?κ린 ?덉륫 媛寃??앹꽦
   const shortTermChange = -10 + Math.random() * 20; // -10% ~ +10%
   const mediumTermChange = -15 + Math.random() * 30; // -15% ~ +15%
   const longTermChange = -20 + Math.random() * 40; // -20% ~ +40%
@@ -1521,7 +1509,7 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
   const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
   const longTermPrice = currentPrice * (1 + longTermChange / 100);
   
-  // ?�후 6개월 ?�측 가�??�성
+  // ?ν썑 6媛쒖썡 ?덉륫 媛寃??앹꽦
   const pricePredictions = [];
   const today = new Date();
   let predictedPrice = currentPrice;
@@ -1530,13 +1518,13 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     const date = new Date(today);
     date.setDate(date.getDate() + i);
     
-    // ?�기 ?�측 가격을 ?�해 ?�진?�으�?변??    const progress = i / 180;
+    // ?κ린 ?덉륫 媛寃⑹쓣 ?ν빐 ?먯쭊?곸쑝濡?蹂??    const progress = i / 180;
     const targetChange = longTermChange / 100;
-    const dailyChange = targetChange * progress + (Math.random() * 0.01 - 0.005); // ?�간???�덤 변??추�?
+    const dailyChange = targetChange * progress + (Math.random() * 0.01 - 0.005); // ?쎄컙???쒕뜡 蹂??異붽?
     
     predictedPrice = predictedPrice * (1 + dailyChange / 100);
     
-    // 30??간격?�로 ?�이??추�? (차트 ?�이???�인??줄이�?
+    // 30??媛꾧꺽?쇰줈 ?곗씠??異붽? (李⑦듃 ?곗씠???ъ씤??以꾩씠湲?
     if (i % 30 === 0) {
       pricePredictions.push({
         date: date.toISOString().split('T')[0],
@@ -1545,7 +1533,7 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     }
   }
   
-  // 목업 주식 ?�이???�성 (generateRecommendation ?�수???�요)
+  // 紐⑹뾽 二쇱떇 ?곗씠???앹꽦 (generateRecommendation ?⑥닔???꾩슂)
   const mockStockData: StockData = {
     ticker,
     companyName: ticker,
@@ -1565,12 +1553,8 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
         signal: 0,
         histogram: 0
       },
-      bollingerBands: {
-        upper: 0,
-        middle: 0,
-        lower: 0,
-        width: 0
-      },
+      bollingerUpper: 0,
+      bollingerLower: 0,
       ma50: 0,
       ma200: 0
     },
@@ -1591,21 +1575,21 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
     patterns: []
   };
   
-  // ?�균 변?�율 기반 감정 ?�수 계산
+  // ?됯퇏 蹂?붿쑉 湲곕컲 媛먯젙 ?먯닔 怨꾩궛
   const avgChange = (shortTermChange + mediumTermChange + longTermChange) / 3;
-  const sentiment = avgChange / 20; // -1 ~ 1 범위�??�규??  
-  // 강점�??�험 ?�소 ?�성
+  const sentiment = avgChange / 20; // -1 ~ 1 踰붿쐞濡??뺢퇋??  
+  // 媛뺤젏怨??꾪뿕 ?붿냼 ?앹꽦
   const strengths = generateStrengths(mockStockData, sentiment);
   const risks = generateRisks(mockStockData, sentiment, []);
   
-  // ?�자 추천 ?�성
+  // ?ъ옄 異붿쿇 ?앹꽦
   const recommendation = generateRecommendation(sentiment, mockStockData);
   
-  // ?�체 ?�약 ?�성
-  const summary = `${ticker}???�재 주�???$${currentPrice.toFixed(2)}?�며, 
-  기술??분석�?기본??분석??종합??결과 ${sentiment > 0 ? '긍정?? : '부?�적'} ?�망??보이�??�습?�다. 
-  ?�기(1개월) ?�상 가격�? $${shortTermPrice.toFixed(2)}, 중기(3개월) $${mediumTermPrice.toFixed(2)}, 
-  ?�기(6개월) $${longTermPrice.toFixed(2)}?�니?? ${recommendation.en}`;
+  // ?꾩껜 ?붿빟 ?앹꽦
+  const summary = `${ticker}???꾩옱 二쇨???$${currentPrice.toFixed(2)}?대ŉ, 
+  湲곗닠??遺꾩꽍怨?湲곕낯??遺꾩꽍??醫낇빀??寃곌낵 ${sentiment > 0 ? '湲띿젙?? : '遺?뺤쟻'} ?꾨쭩??蹂댁씠怨??덉뒿?덈떎. 
+  ?④린(1媛쒖썡) ?덉긽 媛寃⑹? $${shortTermPrice.toFixed(2)}, 以묎린(3媛쒖썡) $${mediumTermPrice.toFixed(2)}, 
+  ?κ린(6媛쒖썡) $${longTermPrice.toFixed(2)}?낅땲?? ${recommendation.en}`;
   
   return {
     shortTerm: {
@@ -1636,16 +1620,16 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
       }
     },
     pricePredictions,
-    confidenceScore: 60 + Math.floor(Math.random() * 30), // 60-89% ?�뢰??    modelInfo: {
+    confidenceScore: 60 + Math.floor(Math.random() * 30), // 60-89% ?좊ː??    modelInfo: {
       type: 'Transformer',
       accuracy: 80,
       features: [
-        '과거 주�? ?�이??,
-        '거래??,
-        '기술??지??,
-        '?�장 지??
+        '怨쇨굅 二쇨? ?곗씠??,
+        '嫄곕옒??,
+        '湲곗닠??吏??,
+        '?쒖옣 吏??
       ],
-      trainPeriod: '2018-01-01 ~ ?�재'
+      trainPeriod: '2018-01-01 ~ ?꾩옱'
     },
     summary,
     summaryKr: summary,
@@ -1658,13 +1642,13 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
   };
 }
 
-// AI 모델???�용??주식 분석 ?�수
+// AI 紐⑤뜽???ъ슜??二쇱떇 遺꾩꽍 ?⑥닔
 export async function analyzeStockWithAI(
   stockData: StockData,
   economicData: EconomicIndicator[],
   analysisType: string = 'comprehensive',
-  modelType: string = 'transformer', // 'lstm' ?�는 'transformer'
-  language: string = 'kr' // 'en' ?�는 'kr'
+  modelType: string = 'transformer', // 'lstm' ?먮뒗 'transformer'
+  language: string = 'kr' // 'en' ?먮뒗 'kr'
 ): Promise<AIAnalysisResponse | { error: string }> {
   try {
     const response = await fetch('/api/analyze-stock', {
@@ -1683,21 +1667,21 @@ export async function analyzeStockWithAI(
     
     if (!response.ok) {
       const errorData = await response.json();
-      return { error: errorData.error || '분석 ?�청 ?�패' };
+      return { error: errorData.error || '遺꾩꽍 ?붿껌 ?ㅽ뙣' };
     }
     
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('AI 분석 ?�류:', error);
-    return { error: '분석 �??�류가 발생?�습?�다' };
+    console.error('AI 遺꾩꽍 ?ㅻ쪟:', error);
+    return { error: '遺꾩꽍 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎' };
   }
 }
 
-// 주�? ?�측 ?�수 (LSTM ?�는 Transformer 모델 ?�용)
+// 二쇨? ?덉륫 ?⑥닔 (LSTM ?먮뒗 Transformer 紐⑤뜽 ?ъ슜)
 export async function predictStockPrice(
   stockData: StockData,
-  modelType: string = 'transformer', // 'lstm' ?�는 'transformer'
+  modelType: string = 'transformer', // 'lstm' ?먮뒗 'transformer'
   predictionPeriod: string = 'all' // 'short', 'medium', 'long', 'all'
 ): Promise<PredictionResult | { error: string }> {
   try {
@@ -1715,18 +1699,18 @@ export async function predictStockPrice(
 
     if (!response.ok) {
       const errorData = await response.json();
-      return { error: errorData.error || '?�측 ?�청 ?�패' };
+      return { error: errorData.error || '?덉륫 ?붿껌 ?ㅽ뙣' };
     }
 
     const data = await response.json();
     return data.prediction;
   } catch (error) {
-    console.error('주�? ?�측 ?�류:', error);
-    return { error: '?�측 �??�류가 발생?�습?�다' };
+    console.error('二쇨? ?덉륫 ?ㅻ쪟:', error);
+    return { error: '?덉륫 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎' };
   }
 }
 
-// 모의 LSTM ?�측 결과 ?�성 (?�제 구현 ???�스?�용)
+// 紐⑥쓽 LSTM ?덉륫 寃곌낵 ?앹꽦 (?ㅼ젣 援ы쁽 ???뚯뒪?몄슜)
 export function generateMockLSTMPrediction(stockData: StockData): PredictionResult {
   const currentPrice = stockData.currentPrice;
   const shortTermChange = Math.random() * 10 - 5; // -5% ~ +5%
@@ -1737,7 +1721,7 @@ export function generateMockLSTMPrediction(stockData: StockData): PredictionResu
   const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
   const longTermPrice = currentPrice * (1 + longTermChange / 100);
   
-  // ?�별 ?�측 가�??�성
+  // ?쇰퀎 ?덉륫 媛寃??앹꽦
   const pricePredictions = [];
   const today = new Date();
   
@@ -1747,18 +1731,18 @@ export function generateMockLSTMPrediction(stockData: StockData): PredictionResu
     
     let predictedPrice;
     if (i <= 30) {
-      // ?�기: ?�재가격에??shortTermPrice까�? ?�형 보간
+      // ?④린: ?꾩옱媛寃⑹뿉??shortTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = currentPrice + (shortTermPrice - currentPrice) * (i / 30);
     } else if (i <= 60) {
-      // 중기: shortTermPrice?�서 mediumTermPrice까�? ?�형 보간
+      // 以묎린: shortTermPrice?먯꽌 mediumTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = shortTermPrice + (mediumTermPrice - shortTermPrice) * ((i - 30) / 30);
     } else {
-      // ?�기: mediumTermPrice?�서 longTermPrice까�? ?�형 보간
+      // ?κ린: mediumTermPrice?먯꽌 longTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = mediumTermPrice + (longTermPrice - mediumTermPrice) * ((i - 60) / 30);
     }
     
-    // ?�간??변?�성 추�?
-    const volatility = currentPrice * 0.01 * Math.random(); // ?�재 가격의 최�? 1% 변??    predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
+    // ?쎄컙??蹂?숈꽦 異붽?
+    const volatility = currentPrice * 0.01 * Math.random(); // ?꾩옱 媛寃⑹쓽 理쒕? 1% 蹂??    predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
     
     pricePredictions.push({
       date: date.toISOString().split('T')[0],
@@ -1804,34 +1788,34 @@ export function generateMockLSTMPrediction(stockData: StockData): PredictionResu
       type: 'LSTM',
       accuracy: Number((75 + Math.random() * 10).toFixed(1)),
       features: [
-        '과거 주�? ?�이??,
-        '거래??,
-        '기술??지??(RSI, MACD, 볼린?� 밴드)',
-        '?�장 지??,
-        '계절???�턴'
+        '怨쇨굅 二쇨? ?곗씠??,
+        '嫄곕옒??,
+        '湲곗닠??吏??(RSI, MACD, 蹂쇰┛? 諛대뱶)',
+        '?쒖옣 吏??,
+        '怨꾩젅???⑦꽩'
       ],
-      trainPeriod: '2018-01-01 ~ ?�재'
+      trainPeriod: '2018-01-01 ~ ?꾩옱'
     },
-    summary: `${stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니??`,
-    summaryKr: `${stockData.companyNameKr || stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니??`,
+    summary: `${stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲??`,
+    summaryKr: `${stockData.companyNameKr || stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲??`,
     strengths: [
-      '강력???�무 ?�태',
-      '경쟁???��??��? ?�익??,
-      '지?�적???�신�?R&D ?�자'
+      '媛뺣젰???щТ ?곹깭',
+      '寃쎌웳???鍮??믪? ?섏씡??,
+      '吏?띿쟻???곸떊怨?R&D ?ъ옄'
     ],
     risks: [
-      '?�장 경쟁 ?�화',
-      '규제 ?�경 변??가?�성',
-      '?�자??가�??�승?�로 ?�한 마진 ?�박'
+      '?쒖옣 寃쎌웳 ?ы솕',
+      '洹쒖젣 ?섍꼍 蹂??媛?μ꽦',
+      '?먯옄??媛寃??곸듅?쇰줈 ?명븳 留덉쭊 ?뺣컯'
     ],
     recommendation: shortTermChange > 0 ? 'BUY' : (shortTermChange < -3 ? 'SELL' : 'HOLD'),
-    recommendationKr: shortTermChange > 0 ? '매수' : (shortTermChange < -3 ? '매도' : '관�?),
-    analysisDetails: `LSTM 모델?� 과거 5?�간??주�? ?�이?? 거래?? 기술??지?��? ?�습?�여 ?�측???�성?�습?�다. 모델?� ?�히 ${stockData.companyName}??계절???�턴�??�장 ?�이?�에 ?�??반응?????�착?�습?�다.`,
-    analysisDetailsKr: `LSTM 모델?� 과거 5?�간??주�? ?�이?? 거래?? 기술??지?��? ?�습?�여 ?�측???�성?�습?�다. 모델?� ?�히 ${stockData.companyNameKr || stockData.companyName}??계절???�턴�??�장 ?�이?�에 ?�??반응?????�착?�습?�다.`
+    recommendationKr: shortTermChange > 0 ? '留ㅼ닔' : (shortTermChange < -3 ? '留ㅻ룄' : '愿留?),
+    analysisDetails: `LSTM 紐⑤뜽? 怨쇨굅 5?꾧컙??二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?쒕? ?숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. 紐⑤뜽? ?뱁엳 ${stockData.companyName}??怨꾩젅???⑦꽩怨??쒖옣 ?ъ씠?댁뿉 ???諛섏쓳?????ъ갑?덉뒿?덈떎.`,
+    analysisDetailsKr: `LSTM 紐⑤뜽? 怨쇨굅 5?꾧컙??二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?쒕? ?숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. 紐⑤뜽? ?뱁엳 ${stockData.companyNameKr || stockData.companyName}??怨꾩젅???⑦꽩怨??쒖옣 ?ъ씠?댁뿉 ???諛섏쓳?????ъ갑?덉뒿?덈떎.`
   };
 }
 
-// 모의 Transformer ?�측 결과 ?�성 (?�제 구현 ???�스?�용)
+// 紐⑥쓽 Transformer ?덉륫 寃곌낵 ?앹꽦 (?ㅼ젣 援ы쁽 ???뚯뒪?몄슜)
 export function generateMockTransformerPrediction(stockData: StockData): PredictionResult {
   const currentPrice = stockData.currentPrice;
   const shortTermChange = Math.random() * 12 - 5; // -5% ~ +7%
@@ -1842,7 +1826,7 @@ export function generateMockTransformerPrediction(stockData: StockData): Predict
   const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
   const longTermPrice = currentPrice * (1 + longTermChange / 100);
   
-  // ?�별 ?�측 가�??�성
+  // ?쇰퀎 ?덉륫 媛寃??앹꽦
   const pricePredictions = [];
   const today = new Date();
   
@@ -1852,18 +1836,18 @@ export function generateMockTransformerPrediction(stockData: StockData): Predict
     
     let predictedPrice;
     if (i <= 30) {
-      // ?�기: ?�재가격에??shortTermPrice까�? ?�형 보간
+      // ?④린: ?꾩옱媛寃⑹뿉??shortTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = currentPrice + (shortTermPrice - currentPrice) * (i / 30);
     } else if (i <= 60) {
-      // 중기: shortTermPrice?�서 mediumTermPrice까�? ?�형 보간
+      // 以묎린: shortTermPrice?먯꽌 mediumTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = shortTermPrice + (mediumTermPrice - shortTermPrice) * ((i - 30) / 30);
     } else {
-      // ?�기: mediumTermPrice?�서 longTermPrice까�? ?�형 보간
+      // ?κ린: mediumTermPrice?먯꽌 longTermPrice源뚯? ?좏삎 蹂닿컙
       predictedPrice = mediumTermPrice + (longTermPrice - mediumTermPrice) * ((i - 60) / 30);
     }
     
-    // ?�간??변?�성 추�? (Transformer??LSTM보다 ?�간 ???�확?�다�?가??
-    const volatility = currentPrice * 0.008 * Math.random(); // ?�재 가격의 최�? 0.8% 변??    predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
+    // ?쎄컙??蹂?숈꽦 異붽? (Transformer??LSTM蹂대떎 ?쎄컙 ???뺥솗?섎떎怨?媛??
+    const volatility = currentPrice * 0.008 * Math.random(); // ?꾩옱 媛寃⑹쓽 理쒕? 0.8% 蹂??    predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
     
     pricePredictions.push({
       date: date.toISOString().split('T')[0],
@@ -1909,36 +1893,36 @@ export function generateMockTransformerPrediction(stockData: StockData): Predict
       type: 'Transformer',
       accuracy: Number((80 + Math.random() * 10).toFixed(1)),
       features: [
-        '과거 주�? ?�이??,
-        '거래??,
-        '기술??지??(RSI, MACD, 볼린?� 밴드)',
-        '?�장 지??,
-        '계절???�턴',
-        '?�스 감성 분석',
-        '거시경제 지??
+        '怨쇨굅 二쇨? ?곗씠??,
+        '嫄곕옒??,
+        '湲곗닠??吏??(RSI, MACD, 蹂쇰┛? 諛대뱶)',
+        '?쒖옣 吏??,
+        '怨꾩젅???⑦꽩',
+        '?댁뒪 媛먯꽦 遺꾩꽍',
+        '嫄곗떆寃쎌젣 吏??
       ],
-      trainPeriod: '2015-01-01 ~ ?�재'
+      trainPeriod: '2015-01-01 ~ ?꾩옱'
     },
-    summary: `${stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니?? ?�기?�으로는 ${longTermChange > 0 ? '긍정?�인' : '부?�적??} ?�망??가지�??�습?�다.`,
-    summaryKr: `${stockData.companyNameKr || stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니?? ?�기?�으로는 ${longTermChange > 0 ? '긍정?�인' : '부?�적??} ?�망??가지�??�습?�다.`,
+    summary: `${stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲?? ?κ린?곸쑝濡쒕뒗 ${longTermChange > 0 ? '湲띿젙?곸씤' : '遺?뺤쟻??} ?꾨쭩??媛吏怨??덉뒿?덈떎.`,
+    summaryKr: `${stockData.companyNameKr || stockData.companyName}??二쇨????④린?곸쑝濡?${shortTermChange > 0 ? '?곸듅' : '?섎씫'}??寃껋쑝濡??덉긽?⑸땲?? 以묎린?곸쑝濡쒕뒗 ${mediumTermChange > 0 ? '?곸듅' : '?섎씫'} 異붿꽭瑜?蹂댁씪 寃껋쑝濡??덉륫?⑸땲?? ?κ린?곸쑝濡쒕뒗 ${longTermChange > 0 ? '湲띿젙?곸씤' : '遺?뺤쟻??} ?꾨쭩??媛吏怨??덉뒿?덈떎.`,
     strengths: [
-      '강력???�무 ?�태',
-      '경쟁???��??��? ?�익??,
-      '지?�적???�신�?R&D ?�자',
-      '?�장 ?�유???��?',
-      '?�양???�품 ?�트?�리??
+      '媛뺣젰???щТ ?곹깭',
+      '寃쎌웳???鍮??믪? ?섏씡??,
+      '吏?띿쟻???곸떊怨?R&D ?ъ옄',
+      '?쒖옣 ?먯쑀???뺣?',
+      '?ㅼ뼇???쒗뭹 ?ы듃?대━??
     ],
     risks: [
-      '?�장 경쟁 ?�화',
-      '규제 ?�경 변??가?�성',
-      '?�자??가�??�승?�로 ?�한 마진 ?�박',
-      '기술 변?�에 ?�른 ?�응 ?�요??,
-      '글로벌 경제 불확?�성'
+      '?쒖옣 寃쎌웳 ?ы솕',
+      '洹쒖젣 ?섍꼍 蹂??媛?μ꽦',
+      '?먯옄??媛寃??곸듅?쇰줈 ?명븳 留덉쭊 ?뺣컯',
+      '湲곗닠 蹂?붿뿉 ?곕Ⅸ ?곸쓳 ?꾩슂??,
+      '湲濡쒕쾶 寃쎌젣 遺덊솗?ㅼ꽦'
     ],
     recommendation: shortTermChange > 0 ? 'BUY' : (shortTermChange < -3 ? 'SELL' : 'HOLD'),
-    recommendationKr: shortTermChange > 0 ? '매수' : (shortTermChange < -3 ? '매도' : '관�?),
-    analysisDetails: `Transformer 모델?� 과거 8?�간??주�? ?�이?? 거래?? 기술??지?? ?�스 감성 분석 결과�??�습?�여 ?�측???�성?�습?�다. 모델?� ?�히 ${stockData.companyName}??계절???�턴, ?�장 ?�이?? 그리�??�스 ?�벤?�에 ?�??반응?????�착?�습?�다. ?�기 주의(Self-Attention) 메커?�즘???�해 ?�기 ?�존?�을 ?�과?�으�?모델링했?�니??`,
-    analysisDetailsKr: `Transformer 모델?� 과거 8?�간??주�? ?�이?? 거래?? 기술??지?? ?�스 감성 분석 결과�??�습?�여 ?�측???�성?�습?�다. 모델?� ?�히 ${stockData.companyNameKr || stockData.companyName}??계절???�턴, ?�장 ?�이?? 그리�??�스 ?�벤?�에 ?�??반응?????�착?�습?�다. ?�기 주의(Self-Attention) 메커?�즘???�해 ?�기 ?�존?�을 ?�과?�으�?모델링했?�니??`
+    recommendationKr: shortTermChange > 0 ? '留ㅼ닔' : (shortTermChange < -3 ? '留ㅻ룄' : '愿留?),
+    analysisDetails: `Transformer 紐⑤뜽? 怨쇨굅 8?꾧컙??二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?? ?댁뒪 媛먯꽦 遺꾩꽍 寃곌낵瑜??숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. 紐⑤뜽? ?뱁엳 ${stockData.companyName}??怨꾩젅???⑦꽩, ?쒖옣 ?ъ씠?? 洹몃━怨??댁뒪 ?대깽?몄뿉 ???諛섏쓳?????ъ갑?덉뒿?덈떎. ?먭린 二쇱쓽(Self-Attention) 硫붿빱?덉쬁???듯빐 ?κ린 ?섏〈?깆쓣 ?④낵?곸쑝濡?紐⑤뜽留곹뻽?듬땲??`,
+    analysisDetailsKr: `Transformer 紐⑤뜽? 怨쇨굅 8?꾧컙??二쇨? ?곗씠?? 嫄곕옒?? 湲곗닠??吏?? ?댁뒪 媛먯꽦 遺꾩꽍 寃곌낵瑜??숈뒿?섏뿬 ?덉륫???앹꽦?덉뒿?덈떎. 紐⑤뜽? ?뱁엳 ${stockData.companyNameKr || stockData.companyName}??怨꾩젅???⑦꽩, ?쒖옣 ?ъ씠?? 洹몃━怨??댁뒪 ?대깽?몄뿉 ???諛섏쓳?????ъ갑?덉뒿?덈떎. ?먭린 二쇱쓽(Self-Attention) 硫붿빱?덉쬁???듯빐 ?κ린 ?섏〈?깆쓣 ?④낵?곸쑝濡?紐⑤뜽留곹뻽?듬땲??`
   };
 }
 
@@ -1947,176 +1931,176 @@ export async function GET(request: NextRequest) {
   const symbol = searchParams.get('symbol');
   
   if (!symbol) {
-    return NextResponse.json({ error: '주식 ?�볼???�요?�니?? }, { status: 400 });
+    return NextResponse.json({ error: '二쇱떇 ?щ낵???꾩슂?⑸땲?? }, { status: 400 });
   }
   
   try {
     const stockData = await fetchStockData(symbol);
     return NextResponse.json(stockData);
   } catch (error) {
-    console.error('주식 ?�이??가?�오�??�패:', error);
-    return NextResponse.json({ error: '?�이?��? 가?�오??�??�류가 발생?�습?�다' }, { status: 500 });
+    console.error('二쇱떇 ?곗씠??媛?몄삤湲??ㅽ뙣:', error);
+    return NextResponse.json({ error: '?곗씠?곕? 媛?몄삤??以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎' }, { status: 500 });
   }
 } 
 
-// 기술??지??기반 감성 ?�수 계산 (0-100)
+// 湲곗닠??吏??湲곕컲 媛먯꽦 ?먯닔 怨꾩궛 (0-100)
 function calculateTechnicalSentiment(technicalIndicators: any): number {
-  let sentiment = 50; // 중립 ?�작??  
-  // RSI 기반 ?�수 조정 (과매??과매???�태 반영)
+  let sentiment = 50; // 以묐┰ ?쒖옉??  
+  // RSI 湲곕컲 ?먯닔 議곗젙 (怨쇰ℓ??怨쇰ℓ???곹깭 諛섏쁺)
   if (technicalIndicators.rsi < 30) {
-    sentiment += 10; // 과매???�태???�승 가?�성
+    sentiment += 10; // 怨쇰ℓ???곹깭???곸듅 媛?μ꽦
   } else if (technicalIndicators.rsi > 70) {
-    sentiment -= 10; // 과매???�태???�락 가?�성
+    sentiment -= 10; // 怨쇰ℓ???곹깭???섎씫 媛?μ꽦
   } else if (technicalIndicators.rsi > 50) {
-    sentiment += 5; // 중립보다 ?�간 ?��? RSI
+    sentiment += 5; // 以묐┰蹂대떎 ?쎄컙 ?믪? RSI
   } else {
-    sentiment -= 5; // 중립보다 ?�간 ??? RSI
+    sentiment -= 5; // 以묐┰蹂대떎 ?쎄컙 ??? RSI
   }
   
-  // MACD 기반 ?�수 조정
+  // MACD 湲곕컲 ?먯닔 議곗젙
   if (technicalIndicators.macd && technicalIndicators.macd.value > 0) {
-    sentiment += 5; // ?�의 MACD???�승 추세
+    sentiment += 5; // ?묒쓽 MACD???곸듅 異붿꽭
     if (technicalIndicators.macd.histogram > 0) {
-      sentiment += 5; // ?�의 ?�스?�그?��? 강한 ?�승 모멘?�
+      sentiment += 5; // ?묒쓽 ?덉뒪?좉렇?⑥? 媛뺥븳 ?곸듅 紐⑤찘?
     }
   } else if (technicalIndicators.macd && technicalIndicators.macd.value < 0) {
-    sentiment -= 5; // ?�의 MACD???�락 추세
+    sentiment -= 5; // ?뚯쓽 MACD???섎씫 異붿꽭
     if (technicalIndicators.macd.histogram < 0) {
-      sentiment -= 5; // ?�의 ?�스?�그?��? 강한 ?�락 모멘?�
+      sentiment -= 5; // ?뚯쓽 ?덉뒪?좉렇?⑥? 媛뺥븳 ?섎씫 紐⑤찘?
     }
   }
   
-  // ?�동?�균??기반 ?�수 조정
+  // ?대룞?됯퇏??湲곕컲 ?먯닔 議곗젙
   const currentPrice = technicalIndicators.bollingerBands?.middle || 0;
   if (currentPrice > technicalIndicators.ma50) {
-    sentiment += 5; // 50???�동?�균???�는 ?�승 추세
+    sentiment += 5; // 50???대룞?됯퇏???꾨뒗 ?곸듅 異붿꽭
   } else {
-    sentiment -= 5; // 50???�동?�균???�래???�락 추세
+    sentiment -= 5; // 50???대룞?됯퇏???꾨옒???섎씫 異붿꽭
   }
   
   if (currentPrice > technicalIndicators.ma200) {
-    sentiment += 5; // 200???�동?�균???�는 ?�기 ?�승 추세
+    sentiment += 5; // 200???대룞?됯퇏???꾨뒗 ?κ린 ?곸듅 異붿꽭
   } else {
-    sentiment -= 5; // 200???�동?�균???�래???�기 ?�락 추세
+    sentiment -= 5; // 200???대룞?됯퇏???꾨옒???κ린 ?섎씫 異붿꽭
   }
   
-  // 볼린?� 밴드 기반 ?�수 조정
+  // 蹂쇰┛? 諛대뱶 湲곕컲 ?먯닔 議곗젙
   if (technicalIndicators.bollingerBands) {
     const { upper, middle, lower } = technicalIndicators.bollingerBands;
     if (currentPrice > upper) {
-      sentiment -= 10; // ?�단 밴드 ?�는 과매??가?�성
+      sentiment -= 10; // ?곷떒 諛대뱶 ?꾨뒗 怨쇰ℓ??媛?μ꽦
     } else if (currentPrice < lower) {
-      sentiment += 10; // ?�단 밴드 ?�래??과매??가?�성
+      sentiment += 10; // ?섎떒 諛대뱶 ?꾨옒??怨쇰ℓ??媛?μ꽦
     }
   }
   
-  // ?�수 범위 ?�한 (0-100)
+  // ?먯닔 踰붿쐞 ?쒗븳 (0-100)
   return Math.max(0, Math.min(100, sentiment));
 }
 
-// 기본??지??기반 감성 ?�수 계산 (0-100)
+// 湲곕낯??吏??湲곕컲 媛먯꽦 ?먯닔 怨꾩궛 (0-100)
 function calculateFundamentalSentiment(fundamentals: any): number {
-  let sentiment = 50; // 중립 ?�작??  
-  // P/E 비율 기반 ?�수 조정
+  let sentiment = 50; // 以묐┰ ?쒖옉??  
+  // P/E 鍮꾩쑉 湲곕컲 ?먯닔 議곗젙
   if (fundamentals.pe > 0) {
     if (fundamentals.pe < 15) {
-      sentiment += 10; // ??? P/E???�?��? 가?�성
+      sentiment += 10; // ??? P/E????됯? 媛?μ꽦
     } else if (fundamentals.pe > 30) {
-      sentiment -= 10; // ?��? P/E??고평가 가?�성
+      sentiment -= 10; // ?믪? P/E??怨좏룊媛 媛?μ꽦
     }
   }
   
-  // ?�장�?기반 ?�수 조정
+  // ?깆옣瑜?湲곕컲 ?먯닔 議곗젙
   if (fundamentals.revenueGrowth > 20) {
-    sentiment += 10; // ?��? 매출 ?�장�?  } else if (fundamentals.revenueGrowth < 0) {
-    sentiment -= 10; // 매출 감소
+    sentiment += 10; // ?믪? 留ㅼ텧 ?깆옣瑜?  } else if (fundamentals.revenueGrowth < 0) {
+    sentiment -= 10; // 留ㅼ텧 媛먯냼
   }
   
   if (fundamentals.epsGrowth > 20) {
-    sentiment += 10; // ?��? EPS ?�장�?  } else if (fundamentals.epsGrowth < 0) {
-    sentiment -= 10; // EPS 감소
+    sentiment += 10; // ?믪? EPS ?깆옣瑜?  } else if (fundamentals.epsGrowth < 0) {
+    sentiment -= 10; // EPS 媛먯냼
   }
   
-  // ?�익??지??기반 ?�수 조정
+  // ?섏씡??吏??湲곕컲 ?먯닔 議곗젙
   if (fundamentals.operatingMargin > 20) {
-    sentiment += 5; // ?��? ?�업 마진
+    sentiment += 5; // ?믪? ?곸뾽 留덉쭊
   } else if (fundamentals.operatingMargin < 10) {
-    sentiment -= 5; // ??? ?�업 마진
+    sentiment -= 5; // ??? ?곸뾽 留덉쭊
   }
   
   if (fundamentals.roe > 15) {
-    sentiment += 5; // ?��? ROE
+    sentiment += 5; // ?믪? ROE
   } else if (fundamentals.roe < 5) {
     sentiment -= 5; // ??? ROE
   }
   
-  // 배당 ?�익�?기반 ?�수 조정
+  // 諛곕떦 ?섏씡瑜?湲곕컲 ?먯닔 議곗젙
   if (fundamentals.dividendYield > 3) {
-    sentiment += 5; // ?��? 배당 ?�익�?  }
+    sentiment += 5; // ?믪? 諛곕떦 ?섏씡瑜?  }
   
-  // 부�?비율 기반 ?�수 조정
+  // 遺梨?鍮꾩쑉 湲곕컲 ?먯닔 議곗젙
   if (fundamentals.debtToEquity > 2) {
-    sentiment -= 5; // ?��? 부�?비율
+    sentiment -= 5; // ?믪? 遺梨?鍮꾩쑉
   }
   
-  // ?�수 범위 ?�한 (0-100)
+  // ?먯닔 踰붿쐞 ?쒗븳 (0-100)
   return Math.max(0, Math.min(100, sentiment));
 }
 
-// 경제 지??기반 감성 ?�수 계산 (0-100)
+// 寃쎌젣 吏??湲곕컲 媛먯꽦 ?먯닔 怨꾩궛 (0-100)
 function calculateEconomicSentiment(economicData: any[]): number {
   if (!economicData || economicData.length === 0) {
-    return 50; // ?�이???�으�?중립 반환
+    return 50; // ?곗씠???놁쑝硫?以묐┰ 諛섑솚
   }
   
-  let sentiment = 50; // 중립 ?�작??  
-  // �?경제 지?�별 ?�향 ?��?
+  let sentiment = 50; // 以묐┰ ?쒖옉??  
+  // 媛?寃쎌젣 吏?쒕퀎 ?곹뼢 ?됯?
   for (const indicator of economicData) {
-    // ?�플?�이??(CPI)
+    // ?명뵆?덉씠??(CPI)
     if (indicator.name.includes('Inflation') || indicator.name.includes('Consumer Price')) {
       if (indicator.change < 0) {
-        sentiment += 5; // ?�플?�이??감소??긍정??      } else if (indicator.change > 0.5) {
-        sentiment -= 5; // ?�플?�이??증�???부?�적
+        sentiment += 5; // ?명뵆?덉씠??媛먯냼??湲띿젙??      } else if (indicator.change > 0.5) {
+        sentiment -= 5; // ?명뵆?덉씠??利앷???遺?뺤쟻
       }
     }
     
-    // 금리
+    // 湲덈━
     if (indicator.name.includes('Interest') || indicator.name.includes('Federal Funds')) {
       if (indicator.change < 0) {
-        sentiment += 5; // 금리 ?�락?� 긍정??      } else if (indicator.change > 0) {
-        sentiment -= 5; // 금리 ?�승?� 부?�적
+        sentiment += 5; // 湲덈━ ?섎씫? 湲띿젙??      } else if (indicator.change > 0) {
+        sentiment -= 5; // 湲덈━ ?곸듅? 遺?뺤쟻
       }
     }
     
-    // GDP ?�장�?    if (indicator.name.includes('GDP')) {
+    // GDP ?깆옣瑜?    if (indicator.name.includes('GDP')) {
       if (indicator.value > 2) {
-        sentiment += 5; // ?��? GDP ?�장률�? 긍정??      } else if (indicator.value < 0) {
-        sentiment -= 10; // 마이?�스 GDP ?�장률�? 매우 부?�적
+        sentiment += 5; // ?믪? GDP ?깆옣瑜좎? 湲띿젙??      } else if (indicator.value < 0) {
+        sentiment -= 10; // 留덉씠?덉뒪 GDP ?깆옣瑜좎? 留ㅼ슦 遺?뺤쟻
       }
     }
     
-    // ?�업�?    if (indicator.name.includes('Unemployment')) {
+    // ?ㅼ뾽瑜?    if (indicator.name.includes('Unemployment')) {
       if (indicator.change < 0) {
-        sentiment += 5; // ?�업�?감소??긍정??      } else if (indicator.change > 0.2) {
-        sentiment -= 5; // ?�업�?증�???부?�적
+        sentiment += 5; // ?ㅼ뾽瑜?媛먯냼??湲띿젙??      } else if (indicator.change > 0.2) {
+        sentiment -= 5; // ?ㅼ뾽瑜?利앷???遺?뺤쟻
       }
     }
     
-    // ?�비???�뢰지??    if (indicator.name.includes('Consumer Confidence')) {
+    // ?뚮퉬???좊ː吏??    if (indicator.name.includes('Consumer Confidence')) {
       if (indicator.change > 0) {
-        sentiment += 5; // ?�비???�뢰지???�승?� 긍정??      } else if (indicator.change < 0) {
-        sentiment -= 5; // ?�비???�뢰지???�락?� 부?�적
+        sentiment += 5; // ?뚮퉬???좊ː吏???곸듅? 湲띿젙??      } else if (indicator.change < 0) {
+        sentiment -= 5; // ?뚮퉬???좊ː吏???섎씫? 遺?뺤쟻
       }
     }
     
-    // ?�업?�산지??    if (indicator.name.includes('Industrial Production')) {
+    // ?곗뾽?앹궛吏??    if (indicator.name.includes('Industrial Production')) {
       if (indicator.change > 0) {
-        sentiment += 3; // ?�업?�산 증�???긍정??      } else if (indicator.change < 0) {
-        sentiment -= 3; // ?�업?�산 감소??부?�적
+        sentiment += 3; // ?곗뾽?앹궛 利앷???湲띿젙??      } else if (indicator.change < 0) {
+        sentiment -= 3; // ?곗뾽?앹궛 媛먯냼??遺?뺤쟻
       }
     }
   }
   
-  // ?�수 범위 ?�한 (0-100)
+  // ?먯닔 踰붿쐞 ?쒗븳 (0-100)
   return Math.max(0, Math.min(100, sentiment));
 }

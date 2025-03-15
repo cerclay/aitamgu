@@ -130,12 +130,8 @@ function generateMockHistoricalPrices(currentPrice: number): { date: string; pri
 function calculateTechnicalIndicators(prices: { date: string; price: number }[]): {
   rsi: number;
   macd: number;
-  bollingerBands: {
-    upper: number;
-    middle: number;
-    lower: number;
-    width: number;
-  };
+  bollingerUpper: number;
+  bollingerLower: number;
   ma50: number;
   ma200: number;
 } {
@@ -144,11 +140,11 @@ function calculateTechnicalIndicators(prices: { date: string; price: number }[])
   // RSI 계산
   const rsi = calculateRSI(prices);
   
-  // 이동평균 계산
+  // ?�동?�균 계산
   const { ma50, ma200 } = calculateMovingAverages(prices);
   
-  // 볼린저 밴드 계산
-  const { upper, lower, middle, width } = calculateBollingerBands(prices);
+  // 볼린?� 밴드 계산
+  const { bollingerUpper, bollingerLower } = calculateBollingerBands(prices);
   
   // MACD 계산
   const macd = calculateMACD(prices);
@@ -156,18 +152,14 @@ function calculateTechnicalIndicators(prices: { date: string; price: number }[])
   return {
     rsi,
     macd,
-    bollingerBands: {
-      upper,
-      middle,
-      lower,
-      width
-    },
+    bollingerUpper,
+    bollingerLower,
     ma50,
     ma200,
   };
 }
 
-// 1?????짜 가?오?function getOneYearAgo() {
+// 1?????�짜 가?�오�?function getOneYearAgo() {
   const date = new Date();
   date.setFullYear(date.getFullYear() - 1);
   return date;
@@ -175,8 +167,8 @@ function calculateTechnicalIndicators(prices: { date: string; price: number }[])
 
 // RSI 계산 (간단??구현)
 function calculateRSI(prices: { date: string; price: number }[]): number {
-  // ?제 계산?서????복잡???고리즘 ?용???요
-  // ?기?는 간단???시?구현
+  // ?�제 계산?�서????복잡???�고리즘 ?�용???�요
+  // ?�기?�는 간단???�시�?구현
   if (prices.length < 14) return 50;
   
   const gains = [];
@@ -196,13 +188,13 @@ function calculateRSI(prices: { date: string; price: number }[]): number {
   const avgGain = gains.reduce((sum, val) => sum + val, 0) / 14;
   const avgLoss = losses.reduce((sum, val) => sum + val, 0) / 14;
   
-  if (avgLoss === 0) return 100; // ?실???으?RSI = 100
+  if (avgLoss === 0) return 100; // ?�실???�으�?RSI = 100
   
   const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
 }
 
-// ?동?균 계산
+// ?�동?�균 계산
 function calculateMovingAverages(prices: { date: string; price: number }[]): { ma50: number; ma200: number } {
   const priceValues = prices.map(item => item.price);
   
@@ -212,7 +204,7 @@ function calculateMovingAverages(prices: { date: string; price: number }[]): { m
   return { ma50, ma200 };
 }
 
-// ?순 ?동?균 계산
+// ?�순 ?�동?�균 계산
 function calculateMA(prices: number[], period: number): number {
   if (prices.length < period) return prices[prices.length - 1];
   
@@ -220,43 +212,29 @@ function calculateMA(prices: number[], period: number): number {
   return slice.reduce((sum, price) => sum + price, 0) / period;
 }
 
-// 볼린저 밴드 계산
-function calculateBollingerBands(prices: { date: string; price: number }[]): { upper: number; lower: number; middle: number; width: number } {
+// 볼린?� 밴드 계산
+function calculateBollingerBands(prices: { date: string; price: number }[]): { bollingerUpper: number; bollingerLower: number } {
   const priceValues = prices.map(item => item.price);
   const period = 20;
   
   if (priceValues.length < period) {
-    const price = priceValues[priceValues.length - 1];
-    const upper = price * 1.05;
-    const lower = price * 0.95;
-    const middle = price;
-    const width = (upper - lower) / middle;
-    
     return { 
-      upper, 
-      lower,
-      middle,
-      width
+      bollingerUpper: priceValues[priceValues.length - 1] * 1.05, 
+      bollingerLower: priceValues[priceValues.length - 1] * 0.95 
     };
   }
   
   const slice = priceValues.slice(priceValues.length - period);
   const ma = slice.reduce((sum, price) => sum + price, 0) / period;
   
-  // 표준 편차 계산
+  // ?��? ?�차 계산
   const squaredDiffs = slice.map(price => Math.pow(price - ma, 2));
   const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / period;
   const stdDev = Math.sqrt(variance);
   
-  const upper = ma + (2 * stdDev);
-  const lower = ma - (2 * stdDev);
-  const width = (upper - lower) / ma;
-  
   return {
-    upper,
-    lower,
-    middle: ma,
-    width
+    bollingerUpper: ma + (2 * stdDev),
+    bollingerLower: ma - (2 * stdDev),
   };
 }
 
@@ -270,7 +248,7 @@ function calculateMACD(prices: { date: string; price: number }[]): number {
   return ema12 - ema26;
 }
 
-// 지???동?균 계산
+// 지???�동?�균 계산
 function calculateEMA(prices: number[], period: number): number {
   if (prices.length < period) return prices[prices.length - 1];
   
@@ -284,139 +262,139 @@ function calculateEMA(prices: number[], period: number): number {
   return ema;
 }
 
-// 경제 지???가?오?export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> => {
+// 경제 지???�이??가?�오�?export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> => {
   try {
-    // ?제 API ?출 ??모의 ?이??반환
+    // ?�제 API ?�출 ?�??모의 ?�이??반환
     return [
       {
         name: 'GDP Growth Rate',
-        nameKr: 'GDP ?장?,
+        nameKr: 'GDP ?�장�?,
         value: 2.1,
         unit: '%',
         change: 0.3,
-        previousPeriod: '?분?,
+        previousPeriod: '?�분�?,
         source: 'FRED',
-        description: '? 총생???장?,
+        description: '�?�� 총생???�장�?,
         impact: 'positive'
       },
       {
         name: 'Unemployment Rate',
-        nameKr: '?업?,
+        nameKr: '?�업�?,
         value: 3.8,
         unit: '%',
         change: -0.1,
-        previousPeriod: '?월',
+        previousPeriod: '?�월',
         source: 'FRED',
-        description: '?동 ?구 ???비율',
+        description: '?�동 ?�구 �??�업??비율',
         impact: 'positive'
       },
       {
         name: 'Inflation Rate',
-        nameKr: '?플?이?,
+        nameKr: '?�플?�이??,
         value: 3.2,
         unit: '%',
         change: -0.2,
-        previousPeriod: '?월',
+        previousPeriod: '?�월',
         source: 'FRED',
-        description: '?비??물? ?승?,
+        description: '?�비??물�? ?�승�?,
         impact: 'negative'
       },
       {
         name: 'Interest Rate',
-        nameKr: '기?금리',
+        nameKr: '기�?금리',
         value: 5.25,
         unit: '%',
         change: 0,
-        previousPeriod: '?월',
+        previousPeriod: '?�월',
         source: 'FRED',
-        description: '중앙??기? 금리',
+        description: '중앙?�??기�? 금리',
         impact: 'neutral'
       },
       {
         name: 'Consumer Confidence',
-        nameKr: '?비???뢰지?,
+        nameKr: '?�비???�뢰지??,
         value: 102.5,
         unit: '',
         change: 1.5,
-        previousPeriod: '?월',
+        previousPeriod: '?�월',
         source: 'Conference Board',
-        description: '?비?들??경제 ???뢰??,
+        description: '?�비?�들??경제 ?�황???�???�뢰??,
         impact: 'positive'
       },
       {
         name: 'Manufacturing PMI',
-        nameKr: '?조?PMI',
+        nameKr: '?�조??PMI',
         value: 51.2,
         unit: '',
         change: -0.3,
-        previousPeriod: '?월',
+        previousPeriod: '?�월',
         source: 'ISM',
-        description: '?조?구매관리자지?,
+        description: '?�조??구매관리자지??,
         impact: 'neutral'
       }
     ];
   } catch (error) {
-    console.error('경제 지??가?오??류:', error);
-    throw new Error('경제 지?  가?오????류가 발생?습?다.');
+    console.error('경제 지??가?�오�??�류:', error);
+    throw new Error('경제 지?��? 가?�오??�??�류가 발생?�습?�다.');
   }
 };
 
-// FRED API??용?여 경제 지???가?오?export async function fetchEconomicIndicatorsFromFRED(): Promise<EconomicIndicator[]> {
-  // FRED API ?? ?요?니??  const FRED_API_KEY = process.env.FRED_API_KEY || '';
+// FRED API�??�용?�여 경제 지???�이??가?�오�?export async function fetchEconomicIndicatorsFromFRED(): Promise<EconomicIndicator[]> {
+  // FRED API ?��? ?�요?�니??  const FRED_API_KEY = process.env.FRED_API_KEY || '';
   
   if (!FRED_API_KEY) {
-    console.warn('FRED API ?? ?정?? ?았?니?? 모의 ?이?? ?용?니??');
+    console.warn('FRED API ?��? ?�정?��? ?�았?�니?? 모의 ?�이?��? ?�용?�니??');
     return generateMockEconomicIndicators();
   }
   
-  // 가?올 경제지??목록
+  // 가?�올 경제지??목록
     const indicators = [
     { 
       id: 'GDP', 
       name: 'GDP Growth Rate', 
-      nameKr: 'GDP ?장?, 
+      nameKr: 'GDP ?�장�?, 
       unit: '%', 
-      description: '?총생???장?, 
+      description: '�?��총생???�장�?, 
       impact: 'positive' as const 
     },
     { 
       id: 'UNRATE', 
       name: 'Unemployment Rate', 
-      nameKr: '?업?, 
+      nameKr: '?�업�?, 
       unit: '%', 
-      description: '미국 ?업?, 
+      description: '미국 ?�업�?, 
       impact: 'negative' as const 
     },
     { 
       id: 'CPIAUCSL', 
       name: 'Consumer Price Index', 
-      nameKr: '?비?물가지?, 
+      nameKr: '?�비?�물가지??, 
       unit: 'Index', 
-      description: '?비?물가지??변?율', 
+      description: '?�비?�물가지??변?�율', 
       impact: 'neutral' as const 
     },
     { 
       id: 'FEDFUNDS', 
       name: 'Federal Funds Rate', 
-      nameKr: '기?금리', 
+      nameKr: '기�?금리', 
       unit: '%', 
-      description: '??방준비제??기?금리', 
+      description: '�??�방준비제??기�?금리', 
       impact: 'negative' as const 
     },
     { 
       id: 'INDPRO', 
       name: 'Industrial Production', 
-      nameKr: '?업산지?, 
+      nameKr: '?�업?�산지??, 
       unit: 'Index', 
-      description: '?업산지??변?율', 
+      description: '?�업?�산지??변?�율', 
       impact: 'positive' as const 
     },
     { 
       id: 'RSAFS', 
       name: 'Retail Sales', 
-      nameKr: '?매?매', 
+      nameKr: '?�매?�매', 
       unit: 'Million $', 
-      description: '?매?매 변?율', 
+      description: '?�매?�매 변?�율', 
       impact: 'positive' as const 
     },
     { 
@@ -424,26 +402,26 @@ function calculateEMA(prices: number[], period: number): number {
       name: 'Housing Starts', 
       nameKr: '주택착공건수', 
       unit: 'Thousand', 
-      description: '?규 주택착공건수', 
+      description: '?�규 주택착공건수', 
       impact: 'positive' as const 
     },
     { 
       id: 'DEXKOUS', 
       name: 'KRW/USD Exchange Rate', 
-      nameKr: '???러 ?율', 
+      nameKr: '???�러 ?�율', 
       unit: 'KRW', 
-      description: '???러 ?율', 
+      description: '???�러 ?�율', 
       impact: 'neutral' as const 
     }
   ];
   
   try {
-    // 병렬?모든 지???가    const promises = indicators.map(async (indicator) => {
+    // 병렬�?모든 지???�이??가?�오�?    const promises = indicators.map(async (indicator) => {
       const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${indicator.id}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=2`;
       const response = await fetch(url);
     
     if (!response.ok) {
-        throw new Error(`FRED API ?류: ${response.status}`);
+        throw new Error(`FRED API ?�류: ${response.status}`);
     }
     
     const data = await response.json();
@@ -453,7 +431,7 @@ function calculateEMA(prices: number[], period: number): number {
     const results = await Promise.all(promises);
     return transformFREDData(results, indicators);
   } catch (error) {
-    console.error('FRED 경제지??가?오??패:', error);
+    console.error('FRED 경제지??가?�오�??�패:', error);
     return generateMockEconomicIndicators();
   }
 }
@@ -473,7 +451,7 @@ function transformFREDData(
         value: 0,
         unit: indicator.unit,
         change: 0,
-        previousPeriod: '?전 기간 ?이???음',
+        previousPeriod: '?�전 기간 ?�이???�음',
         description: indicator.description,
         impact: indicator.impact,
         source: 'FRED'
@@ -499,93 +477,93 @@ function transformFREDData(
   });
 }
 
-// ?번째 ?의
+// �?번째 ?�의
 export function generateMockEconomicIndicators(): EconomicIndicator[] {
   return [
     {
       name: 'GDP Growth Rate',
-      nameKr: 'GDP ?장?,
+      nameKr: 'GDP ?�장�?,
       value: 2.1,
       unit: '%',
       change: 0.3,
       previousPeriod: '2023-Q2',
-      description: '?총생???장?,
+      description: '�?��총생???�장�?,
       impact: 'positive' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     },
     {
       name: 'Unemployment Rate',
-      nameKr: '?업?,
+      nameKr: '?�업�?,
       value: 3.8,
       unit: '%',
       change: -0.1,
       previousPeriod: '2023-08',
-      description: '미국 ?업?,
+      description: '미국 ?�업�?,
       impact: 'negative' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     },
     {
       name: 'Consumer Price Index',
-      nameKr: '?비?물가지?,
+      nameKr: '?�비?�물가지??,
       value: 3.2,
       unit: '%',
       change: -0.2,
       previousPeriod: '2023-08',
-      description: '?비?물가지??변?율',
+      description: '?�비?�물가지??변?�율',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     },
     {
       name: 'Federal Funds Rate',
-      nameKr: '기?금리',
+      nameKr: '기�?금리',
       value: 5.25,
       unit: '%',
       change: 0,
       previousPeriod: '2023-08',
-      description: '??방준비제??기?금리',
+      description: '�??�방준비제??기�?금리',
       impact: 'negative' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     },
     {
       name: 'Industrial Production',
-      nameKr: '?업산지?,
+      nameKr: '?�업?�산지??,
       value: 0.4,
       unit: '%',
       change: 0.7,
       previousPeriod: '2023-08',
-      description: '?업산지??변?율',
+      description: '?�업?�산지??변?�율',
       impact: 'positive' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     },
     {
       name: 'KRW/USD Exchange Rate',
-      nameKr: '???러 ?율',
+      nameKr: '???�러 ?�율',
       value: 1350.25,
       unit: 'KRW',
       change: 2.1,
       previousPeriod: '2023-09-01',
-      description: '???러 ?율',
+      description: '???�러 ?�율',
       impact: 'neutral' as const,
-      source: 'FRED (모의 ?이??'
+      source: 'FRED (모의 ?�이??'
     }
   ];
 }
 
-// ??번째 ?의 (?름 변?
+// ??번째 ?�의 (?�름 변�?
 export function createAlternativeMockEconomicData(): EconomicIndicator[] {
-  // 기존 ?수 ?출
+  // 기존 ?�수 ?�출
   return generateMockEconomicIndicators();
 }
 
-// AI ?측 ?성
+// AI ?�측 ?�성
 export const generatePrediction = async (
   symbol: string,
   stockData: StockData, 
   economicData: EconomicIndicator[]
 ): Promise<PredictionResult> => {
   try {
-    // ?제 API ?출 ?는 모델 ?용 로직
-    // ?기?는 모의 ?이? ?성?되, ?제 ?이? 기반?로 ??계산 추?
+    // ?�제 API ?�출 ?�는 모델 ?�용 로직
+    // ?�기?�는 모의 ?�이?��? ?�성?�되, ?�제 ?�이?��? 기반?�로 ??계산 추�?
     
     const currentPrice = stockData.currentPrice;
     
@@ -598,25 +576,25 @@ export const generatePrediction = async (
     // 경제 지??분석
     const economicSentiment = calculateEconomicSentiment(economicData);
     
-    // 종합 감성 ?수 (0-100)
+    // 종합 감성 ?�수 (0-100)
     const overallSentiment = (technicalSentiment * 0.4) + (fundamentalSentiment * 0.4) + (economicSentiment * 0.2);
     
-    // 감성 ?수기반?로 가?변???측
+    // 감성 ?�수�?기반?�로 가�?변???�측
     const volatility = calculateVolatility(stockData.historicalPrices.map(p => p.price));
     
-    // ?기 ?측 (1개월)
+    // ?�기 ?�측 (1개월)
     const shortTermChange = (overallSentiment - 50) * 0.02 * volatility;
     const shortTermPrice = currentPrice * (1 + shortTermChange / 100);
     
-    // 중기 ?측 (3개월)
+    // 중기 ?�측 (3개월)
     const mediumTermChange = (overallSentiment - 50) * 0.04 * volatility;
     const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
     
-    // ?기 ?측 (6개월)
+    // ?�기 ?�측 (6개월)
     const longTermChange = (overallSentiment - 50) * 0.08 * volatility;
     const longTermPrice = currentPrice * (1 + longTermChange / 100);
     
-    // ?측 가??계???성
+    // ?�측 가�??�계???�성
     const pricePredictions = generatePricePredictions(
       currentPrice,
       shortTermPrice,
@@ -624,35 +602,35 @@ export const generatePrediction = async (
       longTermPrice
     );
     
-    // ?뢰???수 계산 (기술??지?의 ????에 ?라 조정)
+    // ?�뢰???�수 계산 (기술??지?�의 ?��??�에 ?�라 조정)
     let confidenceScore = 65 + Math.random() * 20;
     
-    // 기술??지? ????방향??가리키?뢰???승
+    // 기술??지?��? ?��???방향??가리키�??�뢰???�승
     let technicalConsistency = 0;
     if ((stockData.technicalIndicators.rsi > 50) === (shortTermChange > 0)) technicalConsistency++;
     if ((stockData.technicalIndicators.macd.value > 0) === (shortTermChange > 0)) technicalConsistency++;
     if ((currentPrice > stockData.technicalIndicators.ma50) === (shortTermChange > 0)) technicalConsistency++;
     if ((currentPrice > stockData.technicalIndicators.ma200) === (shortTermChange > 0)) technicalConsistency++;
     
-    // ??에 ?라 ?뢰??조정 (최? ±10%)
+    // ?��??�에 ?�라 ?�뢰??조정 (최�? ±10%)
     confidenceScore += (technicalConsistency - 2) * 2.5;
     
-    // ?뢰??범위 ?한 (50-95%)
+    // ?�뢰??범위 ?�한 (50-95%)
     confidenceScore = Math.max(50, Math.min(95, confidenceScore));
     
-    // 강점 ???험 ?소 ?성
+    // 강점 �??�험 ?�소 ?�성
     const strengths = [];
     const risks = [];
     
-    // 기술??지??기반 강점/?험
+    // 기술??지??기반 강점/?�험
     if (stockData.technicalIndicators.rsi < 30) {
-      strengths.push('RSI가 과매??구간???어 반등 가?성???습?다');
+      strengths.push('RSI가 과매??구간???�어 반등 가?�성???�습?�다');
     } else if (stockData.technicalIndicators.rsi > 70) {
-      risks.push('RSI가 과매??구간???어 ?기 조정 가?성???습?다');
+      risks.push('RSI가 과매??구간???�어 ?�기 조정 가?�성???�습?�다');
     }
     
-    // 경제 지??기반 강점/?험
-    // ?플?이??지??찾기
+    // 경제 지??기반 강점/?�험
+    // ?�플?�이??지??찾기
     const inflationIndicator = economicData.find(indicator => 
       indicator.name.includes('Inflation') || 
       indicator.name.includes('Consumer Price')
@@ -665,24 +643,24 @@ export const generatePrediction = async (
     );
     
     if (inflationIndicator && inflationIndicator.change < 0) {
-      strengths.push('?플?이?이 감소 추세? 기업 비용 부?이 ?화?????습?다');
+      strengths.push('?�플?�이?�이 감소 추세�? 기업 비용 부?�이 ?�화?????�습?�다');
     } else if (inflationIndicator && inflationIndicator.change > 0.5) {
-      risks.push('?플?이?이 ?승 추세? 기업 비용 부?이 증??????습?다');
+      risks.push('?�플?�이?�이 ?�승 추세�? 기업 비용 부?�이 증�??????�습?�다');
     }
     
     if (interestRateIndicator && interestRateIndicator.change < 0) {
-      strengths.push('금리가 ?락 추세? 기업 ?금 조달 비용??감소?????습?다');
+      strengths.push('금리가 ?�락 추세�? 기업 ?�금 조달 비용??감소?????�습?�다');
     } else if (interestRateIndicator && interestRateIndicator.change > 0) {
-      risks.push('금리가 ?승 추세? 기업 ?금 조달 비용??증??????습?다');
+      risks.push('금리가 ?�승 추세�? 기업 ?�금 조달 비용??증�??????�습?�다');
     }
     
-    // ?자 추천 ?성
+    // ?�자 추천 ?�성
     const recommendation = generateRecommendation(overallSentiment / 100, stockData);
     
-    // ?세 분석 ?용 ?성
-    const analysisDetails = `Transformer 모델? 과거 주? ?이? 거래?? 기술??지?? ?스 감성 분석 결과?습?여 ?측???성?습?다. ${stockData.companyName}?주????재 ${currentPrice.toFixed(2)}?러??거래?고 ?으? 기술??지? 기본??지? 종합?으?분석??결과 ${shortTermChange > 0 ? '?승' : '?락'} 추세가 ?상?니?? ?히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???어 반등 가?성???습?다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???어 ?기 조정 가?성???습?다.' : 'RSI??중립?인 ????착?습?다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?수??승 모멘??보이??습?다.' : 'MACD가 ?수??락 모멘??보이??습?다.'} 경제 지??측면?서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?플?이?이 감소 추세?긍정?입?다.' : '?플?이?이 ?승 추세?주의가 ?요?니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?정?이거나 ?락 추세?긍정?입?다.' : '금리가 ?승 추세?주의가 ?요?니??') : ''}`;
+    // ?�세 분석 ?�용 ?�성
+    const analysisDetails = `Transformer 모델?� 과거 주�? ?�이?? 거래?? 기술??지?? ?�스 감성 분석 결과�??�습?�여 ?�측???�성?�습?�다. ${stockData.companyName}??주�????�재 ${currentPrice.toFixed(2)}?�러??거래?�고 ?�으�? 기술??지?��? 기본??지?��? 종합?�으�?분석??결과 ${shortTermChange > 0 ? '?�승' : '?�락'} 추세가 ?�상?�니?? ?�히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???�어 반등 가?�성???�습?�다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???�어 ?�기 조정 가?�성???�습?�다.' : 'RSI??중립?�인 ?��????��??�고 ?�습?�다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?�수�??�승 모멘?�??보이�??�습?�다.' : 'MACD가 ?�수�??�락 모멘?�??보이�??�습?�다.'} 경제 지??측면?�서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?�플?�이?�이 감소 추세�?긍정?�입?�다.' : '?�플?�이?�이 ?�승 추세�?주의가 ?�요?�니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?�정?�이거나 ?�락 추세�?긍정?�입?�다.' : '금리가 ?�승 추세�?주의가 ?�요?�니??') : ''}`;
     
-    const analysisDetailsKr = `Transformer 모델? 과거 주? ?이? 거래?? 기술??지?? ?스 감성 분석 결과?습?여 ?측???성?습?다. ${stockData.companyNameKr || stockData.companyName}?주????재 ${currentPrice.toFixed(2)}?러??거래?고 ?으? 기술??지? 기본??지? 종합?으?분석??결과 ${shortTermChange > 0 ? '?승' : '?락'} 추세가 ?상?니?? ?히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???어 반등 가?성???습?다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???어 ?기 조정 가?성???습?다.' : 'RSI??중립?인 ????착?습?다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?수??승 모멘??보이??습?다.' : 'MACD가 ?수??락 모멘??보이??습?다.'} 경제 지??측면?서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?플?이?이 감소 추세?긍정?입?다.' : '?플?이?이 ?승 추세?주의가 ?요?니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?정?이거나 ?락 추세?긍정?입?다.' : '금리가 ?승 추세?주의가 ?요?니??') : ''}`;
+    const analysisDetailsKr = `Transformer 모델?� 과거 주�? ?�이?? 거래?? 기술??지?? ?�스 감성 분석 결과�??�습?�여 ?�측???�성?�습?�다. ${stockData.companyNameKr || stockData.companyName}??주�????�재 ${currentPrice.toFixed(2)}?�러??거래?�고 ?�으�? 기술??지?��? 기본??지?��? 종합?�으�?분석??결과 ${shortTermChange > 0 ? '?�승' : '?�락'} 추세가 ?�상?�니?? ?�히 ${stockData.technicalIndicators.rsi < 30 ? 'RSI가 과매??구간???�어 반등 가?�성???�습?�다.' : stockData.technicalIndicators.rsi > 70 ? 'RSI가 과매??구간???�어 ?�기 조정 가?�성???�습?�다.' : 'RSI??중립?�인 ?��????��??�고 ?�습?�다.'} ${stockData.technicalIndicators.macd.value > 0 ? 'MACD가 ?�수�??�승 모멘?�??보이�??�습?�다.' : 'MACD가 ?�수�??�락 모멘?�??보이�??�습?�다.'} 경제 지??측면?�서??${inflationIndicator ? (inflationIndicator.change < 0 ? '?�플?�이?�이 감소 추세�?긍정?�입?�다.' : '?�플?�이?�이 ?�승 추세�?주의가 ?�요?�니??') : ''} ${interestRateIndicator ? (interestRateIndicator.change <= 0 ? '금리가 ?�정?�이거나 ?�락 추세�?긍정?�입?�다.' : '금리가 ?�승 추세�?주의가 ?�요?�니??') : ''}`;
     
     return {
       shortTerm: {
@@ -718,18 +696,18 @@ export const generatePrediction = async (
         type: 'Transformer',
         accuracy: Number((80 + Math.random() * 10).toFixed(1)),
         features: [
-          '과거 주?,
+          '과거 주�? ?�이??,
           '거래??,
-          '기술??지??(RSI, MACD, 볼린저 밴드)',
-          '?장 지??,
-          '계절???턴',
-          '?스 감성 분석',
+          '기술??지??(RSI, MACD, 볼린?� 밴드)',
+          '?�장 지??,
+          '계절???�턴',
+          '?�스 감성 분석',
           '거시경제 지??
         ],
-        trainPeriod: '2015-01-01 ~ ?재'
+        trainPeriod: '2015-01-01 ~ ?�재'
       },
-      summary: `${stockData.companyName}?주????기?으?${shortTermChange > 0 ? '?승' : '?락'}??것으??상?니?? 중기?으로는 ${mediumTermChange > 0 ? '?승' : '?락'} 추세?보일 것으??측?니?? ?기?으로는 ${longTermChange > 0 ? '긍정?인' : '부?적??} ?망??가지??습?다.`,
-      summaryKr: `${stockData.companyNameKr || stockData.companyName}?주????기?으?${shortTermChange > 0 ? '?승' : '?락'}??것으??상?니?? 중기?으로는 ${mediumTermChange > 0 ? '?승' : '?락'} 추세?보일 것으??측?니?? ?기?으로는 ${longTermChange > 0 ? '긍정?인' : '부?적??} ?망??가지??습?다.`,
+      summary: `${stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니?? ?�기?�으로는 ${longTermChange > 0 ? '긍정?�인' : '부?�적??} ?�망??가지�??�습?�다.`,
+      summaryKr: `${stockData.companyNameKr || stockData.companyName}??주�????�기?�으�?${shortTermChange > 0 ? '?�승' : '?�락'}??것으�??�상?�니?? 중기?�으로는 ${mediumTermChange > 0 ? '?�승' : '?�락'} 추세�?보일 것으�??�측?�니?? ?�기?�으로는 ${longTermChange > 0 ? '긍정?�인' : '부?�적??} ?�망??가지�??�습?�다.`,
       strengths: strengths.slice(0, 5),
       risks: risks.slice(0, 5),
       recommendation: recommendation.en,
@@ -738,12 +716,12 @@ export const generatePrediction = async (
       analysisDetailsKr
     };
   } catch (error) {
-    console.error('?측 ?성 ?류:', error);
-    throw new Error('?측???는 ??류가 발생?습?다.');
+    console.error('?�측 ?�성 ?�류:', error);
+    throw new Error('?�측???�성?�는 �??�류가 발생?�습?�다.');
   }
 };
 
-// ?렌??계산 (간단???형 ?? 기울?
+// ?�렌??계산 (간단???�형 ?��? 기울�?
 function calculateTrend(prices: number[]): number {
   if (prices.length < 2) return 0;
   
@@ -760,10 +738,10 @@ function calculateTrend(prices: number[]): number {
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
   const avgPrice = sumY / n;
   
-  // 기울기? 백분?로 변??  return (slope / avgPrice) * 100;
+  // 기울기�? 백분?�로 변??  return (slope / avgPrice) * 100;
 }
 
-// 변?성 계산
+// 변?�성 계산
 function calculateVolatility(prices: number[]): number {
   if (prices.length < 2) return 0;
   
@@ -779,7 +757,7 @@ function calculateVolatility(prices: number[]): number {
   return Math.sqrt(variance);
 }
 
-// ?측 가??계???성
+// ?�측 가�??�계???�성
 function generatePricePredictions(
   currentPrice: number,
   shortTermPrice: number,
@@ -789,19 +767,19 @@ function generatePricePredictions(
   const predictions = [];
   const today = new Date();
   
-  // ?기(1개월) ?측 ?인???성
+  // ?�기(1개월) ?�측 ?�인???�성
   const shortTerm = new Date(today);
   shortTerm.setMonth(today.getMonth() + 1);
   
-  // 중기(3개월) ?측 ?인???성
+  // 중기(3개월) ?�측 ?�인???�성
   const mediumTerm = new Date(today);
   mediumTerm.setMonth(today.getMonth() + 3);
   
-  // ?기(6개월) ?측 ?인???성
+  // ?�기(6개월) ?�측 ?�인???�성
   const longTerm = new Date(today);
   longTerm.setMonth(today.getMonth() + 6);
   
-  // ?측 ?인???이??보간 ?이???성
+  // ?�측 ?�인???�이??보간 ?�이???�성
   const totalDays = Math.round((longTerm.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   
   for (let i = 1; i <= totalDays; i++) {
@@ -812,23 +790,23 @@ function generatePricePredictions(
     const dayRatio = i / totalDays;
     
     if (i <= 30) {
-      // ?1개월: ?재 가격에???기 ?측까? ?형 보간
+      // �?1개월: ?�재 가격에???�기 ?�측까�? ?�형 보간
       predictedPrice = currentPrice + (shortTermPrice - currentPrice) * (i / 30);
     } else if (i <= 60) {
-      // 1-3개월: ?기 ?측?서 중기 ?측까? ?형 보간
+      // 1-3개월: ?�기 ?�측?�서 중기 ?�측까�? ?�형 보간
       predictedPrice = shortTermPrice + (mediumTermPrice - shortTermPrice) * ((i - 30) / 30);
     } else {
-      // 3-6개월: 중기 ?측?서 ?기 ?측까? ?형 보간
+      // 3-6개월: 중기 ?�측?�서 ?�기 ?�측까�? ?�형 보간
       predictedPrice = mediumTermPrice + (longTermPrice - mediumTermPrice) * ((i - 60) / 30);
     }
     
-    // ?간??변?성 추?
+    // ?�간??변?�성 추�?
     const volatility = currentPrice * 0.008 * Math.random();
     predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
     
-    // ?측 가?반올?    const finalPredictedPrice = Number(predictedPrice.toFixed(2));
+    // ?�측 가�?반올�?    const finalPredictedPrice = Number(predictedPrice.toFixed(2));
     
-    // 범위 계산 (?측 가격의 ±5%)
+    // 범위 계산 (?�측 가격의 ±5%)
     const rangeMin = Number((finalPredictedPrice * 0.95).toFixed(2));
     const rangeMax = Number((finalPredictedPrice * 1.05).toFixed(2));
     
@@ -845,98 +823,98 @@ function generatePricePredictions(
   return predictions;
 }
 
-// 강점 ?성
+// 강점 ?�성
 function generateStrengths(stockData: StockData, sentiment: number): string[] {
   const strengths = [];
   
   if (stockData.technicalIndicators.rsi < 30) {
-    strengths.push('RSI가 과매??구간???어 반등 가?성???습?다.');
+    strengths.push('RSI가 과매??구간???�어 반등 가?�성???�습?�다.');
   }
   
   if (stockData.technicalIndicators.macd.value > 0) {
-    strengths.push('MACD가 ?수? ?승 모멘???성?고 ?습?다.');
+    strengths.push('MACD가 ?�수�? ?�승 모멘?�???�성?�고 ?�습?�다.');
   }
   
   if (stockData.currentPrice > stockData.technicalIndicators.ma50) {
-    strengths.push('?재 가격이 50???동?균???에 ?어 ?기 ?승 추세?보이??습?다.');
+    strengths.push('?�재 가격이 50???�동?�균???�에 ?�어 ?�기 ?�승 추세�?보이�??�습?�다.');
   }
   
   if (stockData.currentPrice > stockData.technicalIndicators.ma200) {
-    strengths.push('?재 가격이 200???동?균???에 ?어 ?기 ?승 추세?보이??습?다.');
+    strengths.push('?�재 가격이 200???�동?�균???�에 ?�어 ?�기 ?�승 추세�?보이�??�습?�다.');
   }
   
   if (stockData.fundamentals.revenueGrowth > 10) {
-    strengths.push(`매출 ?장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%?? ?장? 보이??습?다.`);
+    strengths.push(`매출 ?�장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%�??��? ?�장?��? 보이�??�습?�다.`);
   }
   
   if (stockData.fundamentals.operatingMargin > 20) {
-    strengths.push(`?업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%?? ?익?을 ??고 ?습?다.`);
+    strengths.push(`?�업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%�??��? ?�익?�을 ?��??�고 ?�습?�다.`);
   }
   
   if (stockData.fundamentals.pe > 0 && stockData.fundamentals.pe < 15) {
-    strengths.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}?? ??으?? ?습?다.`);
+    strengths.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}�??��??�으�??�?��??�어 ?�습?�다.`);
   }
   
   if (stockData.fundamentals.dividendYield > 3) {
-    strengths.push(`배당 ?익률이 ${stockData.fundamentals.dividendYield.toFixed(1)}%??정?인 ?익???공?니??`);
+    strengths.push(`배당 ?�익률이 ${stockData.fundamentals.dividendYield.toFixed(1)}%�??�정?�인 ?�익???�공?�니??`);
   }
   
-  // 최소 2? 최? 5개의 강점 반환
+  // 최소 2�? 최�? 5개의 강점 반환
   if (strengths.length < 2) {
-    strengths.push('기술??분석 ? 개선?고 ?는 추세?니??');
-    strengths.push('?장 ?균 ??경쟁???는 ????을 ??고 ?습?다.');
+    strengths.push('기술??분석 지?��? 개선?�고 ?�는 추세?�니??');
+    strengths.push('?�장 ?�균 ?��?경쟁???�는 ?��??�을 ?��??�고 ?�습?�다.');
   }
   
   return strengths.slice(0, 5);
 }
 
-// ?험 ?소 ?성
+// ?�험 ?�소 ?�성
 function generateRisks(stockData: StockData, sentiment: number, economicData: EconomicIndicator[]): string[] {
   const risks = [];
   
   if (stockData.technicalIndicators.rsi > 70) {
-    risks.push('RSI가 과매??구간???어 ?기 조정 가?성???습?다.');
+    risks.push('RSI가 과매??구간???�어 ?�기 조정 가?�성???�습?�다.');
   }
   
   if (stockData.technicalIndicators.macd.value < 0) {
-    risks.push('MACD가 ?수? ?락 모멘???성?고 ?습?다.');
+    risks.push('MACD가 ?�수�? ?�락 모멘?�???�성?�고 ?�습?�다.');
   }
   
   if (stockData.currentPrice < stockData.technicalIndicators.ma50) {
-    risks.push('?재 가격이 50???동?균???래???어 ?기 ?락 추세?보이??습?다.');
+    risks.push('?�재 가격이 50???�동?�균???�래???�어 ?�기 ?�락 추세�?보이�??�습?�다.');
   }
   
   if (stockData.currentPrice < stockData.technicalIndicators.ma200) {
-    risks.push('?재 가격이 200???동?균???래???어 ?기 ?락 추세?보이??습?다.');
+    risks.push('?�재 가격이 200???�동?�균???�래???�어 ?�기 ?�락 추세�?보이�??�습?�다.');
   }
   
   if (stockData.fundamentals.revenueGrowth < 0) {
-    risks.push(`매출 ?장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%?감소 추세?보이??습?다.`);
+    risks.push(`매출 ?�장률이 ${stockData.fundamentals.revenueGrowth.toFixed(1)}%�?감소 추세�?보이�??�습?�다.`);
   }
   
   if (stockData.fundamentals.operatingMargin < 10) {
-    risks.push(`?업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%???? ?익?을 보이??습?다.`);
+    risks.push(`?�업 마진??${stockData.fundamentals.operatingMargin.toFixed(1)}%�???? ?�익?�을 보이�??�습?�다.`);
   }
   
   if (stockData.fundamentals.pe > 30) {
-    risks.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}?? ??으?고평가?어 ?습?다.`);
+    risks.push(`P/E 비율??${stockData.fundamentals.pe.toFixed(1)}�??��??�으�?고평가?�어 ?�습?�다.`);
   }
   
-  const interestRate = economicData.find(item => item.name.includes('기?금리'));
+  const interestRate = economicData.find(item => item.name.includes('기�?금리'));
   if (interestRate && interestRate.change > 0) {
-    risks.push('금리 ?승 ?경? 주식 ?장??부?적???향??미칠 ???습?다.');
+    risks.push('금리 ?�승 ?�경?� 주식 ?�장??부?�적???�향??미칠 ???�습?�다.');
   }
   
-  // 최소 2? 최? 5개의 ?험 ?소 반환
+  // 최소 2�? 최�? 5개의 ?�험 ?�소 반환
   if (risks.length < 2) {
-    risks.push('?장 변?성??증???경우 주? ?락 ?험???습?다.');
-    risks.push('경쟁 ?화?한 ?장 ?유??감소 가?성???습?다.');
+    risks.push('?�장 변?�성??증�???경우 주�? ?�락 ?�험???�습?�다.');
+    risks.push('경쟁 ?�화�??�한 ?�장 ?�유??감소 가?�성???�습?�다.');
   }
   
   return risks.slice(0, 5);
 }
 
-// ?자 추천 ?성
+// ?�자 추천 ?�성
 function generateRecommendation(sentiment: number, stockData: StockData): { en: string; kr: string } {
   const companyName = stockData.companyName;
   const companyNameKr = stockData.companyNameKr || stockData.companyName;
@@ -946,34 +924,34 @@ function generateRecommendation(sentiment: number, stockData: StockData): { en: 
   
   if (sentiment > 0.5) {
     en = `${companyName} is showing positive signals in both technical and fundamental analysis, recommending a buy. It is particularly suitable for long-term investors.`;
-    kr = `${companyNameKr}?(?? ?재 기술? 기본?분석 모두 긍정?인 ?호?보이??어 매수 추천?니?? ?히 ?기 ?자?에?합??종목?로 ?단?니??`;
+    kr = `${companyNameKr}?�(?? ?�재 기술?? 기본??분석 모두 긍정?�인 ?�호�?보이�??�어 매수 추천?�니?? ?�히 ?�기 ?�자?�에�??�합??종목?�로 ?�단?�니??`;
   } else if (sentiment > 0.2) {
     en = `${companyName} is showing a moderate upward trend, making a small, divided buying strategy appropriate. It would be good to build a position while watching the market situation.`;
-    kr = `${companyNameKr}?(?? ?만???승 추세?보이??어 ?액 분할 매수 ?략???합?니?? ?장 ?황?주시?며 ????을 구축?는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?�(?? ?�만???�승 추세�?보이�??�어 ?�액 분할 매수 ?�략???�합?�니?? ?�장 ?�황??주시?�며 ?��??�을 구축?�는 것이 좋겠?�니??`;
   } else if (sentiment > -0.2) {
     en = `${companyName} is currently showing neutral signals, so we recommend watching. It would be good to make an investment decision after waiting for additional momentum or corporate events.`;
-    kr = `${companyNameKr}?(?? ?재 중립?인 ?호?보이??어 관망을 추천?니?? 추??인 모멘?나 기업 ?벤? 기다????자 결정???는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?�(?? ?�재 중립?�인 ?�호�?보이�??�어 관망을 추천?�니?? 추�??�인 모멘?�?�나 기업 ?�벤?��? 기다�????�자 결정???�는 것이 좋겠?�니??`;
   } else if (sentiment > -0.5) {
     en = `${companyName} has detected a weak signal, so it is time to refrain from new purchases and consider clearing some positions if you are holding them.`;
-    kr = `${companyNameKr}?(?? ?세 ?호가 감?어 ?규 매수???제?고 보유 중인 경우 ?? ? ?????리?고려?볼 ?점?니??`;
+    kr = `${companyNameKr}?�(?? ?�세 ?�호가 감�??�어 ?�규 매수???�제?�고 보유 중인 경우 ?��? ?��????�리�?고려?�볼 ?�점?�니??`;
   } else {
     en = `${companyName} is currently showing negative signals in both technical and fundamental analysis, recommending a sell or wait. It would be good to refrain from new investments until market conditions improve.`;
-    kr = `${companyNameKr}?(?? ?재 기술? 기본?분석 모두 부?적???호?보이??어 매도 ?는 관망을 추천?니?? ?장 ?황?개선???까지 ?규 ?자???제?는 것이 좋겠?니??`;
+    kr = `${companyNameKr}?�(?? ?�재 기술?? 기본??분석 모두 부?�적???�호�?보이�??�어 매도 ?�는 관망을 추천?�니?? ?�장 ?�황??개선???�까지 ?�규 ?�자???�제?�는 것이 좋겠?�니??`;
   }
   
   return { en, kr };
 }
 
-// 모의 주식 ?이???성
+// 모의 주식 ?�이???�성
 export function generateMockStockData(symbol: string): StockData {
   try {
-    // ?사 ?보 가?오?    const companyInfo = getCompanyInfo(symbol);
+    // ?�사 ?�보 가?�오�?    const companyInfo = getCompanyInfo(symbol);
     
-    // 모의 ?이???성
+    // 모의 ?�이???�성
     const currentPrice = 100 + Math.random() * 900;
     const priceChange = Math.random() * 10 - 5; // -5% ~ +5%
     
-    // 과거 주? ?이???성
+    // 과거 주�? ?�이???�성
     const historicalPrices = generateMockHistoricalPrices(currentPrice);
     
     // 기술??지??계산
@@ -1011,10 +989,9 @@ export function generateMockStockData(symbol: string): StockData {
       ]
     };
     
-    // 차트 ?턴 ?성
+    // 차트 ?�턴 ?�성
     const patterns = generateChartPatterns();
     
-    // 모의 ?스 ?성
     // 모의 ?�스 ?�성
     const news = generateMockNews(symbol, companyInfo.companyName);
     
@@ -1127,7 +1104,18 @@ export function generateMockStockData(symbol: string): StockData {
           width: 0
         },
         ma50: 0,
-        ma200: 0
+        ma200: 0,
+        ema20: 0,
+        ema50: 0,
+        atr: 0,
+        obv: 0,
+        stochastic: {
+          k: 0,
+          d: 0
+        },
+        adx: 0,
+        supportLevels: [],
+        resistanceLevels: []
       },
       fundamentals: {
         pe: 15,
@@ -1565,12 +1553,8 @@ function generateMockPrediction(ticker: string, currentPrice: number): Predictio
         signal: 0,
         histogram: 0
       },
-      bollingerBands: {
-        upper: 0,
-        middle: 0,
-        lower: 0,
-        width: 0
-      },
+      bollingerUpper: 0,
+      bollingerLower: 0,
       ma50: 0,
       ma200: 0
     },

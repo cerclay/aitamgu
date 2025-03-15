@@ -90,8 +90,8 @@ function generateTechnicalAnalysisPrompt(stockData: any): string {
 기술적 지표:
 - RSI: ${stockData.technicalIndicators.rsi}
 - MACD: ${stockData.technicalIndicators.macd}
-- 볼린저 밴드 상단: $${stockData.technicalIndicators.bollingerUpper}
-- 볼린저 밴드 하단: $${stockData.technicalIndicators.bollingerLower}
+- 볼린저 밴드 상단: $${stockData.technicalIndicators.bollingerBands.upper}
+- 볼린저 밴드 하단: $${stockData.technicalIndicators.bollingerBands.lower}
 - 50일 이동평균: $${stockData.technicalIndicators.ma50}
 - 200일 이동평균: $${stockData.technicalIndicators.ma200}
 
