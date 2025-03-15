@@ -1055,7 +1055,6 @@ export function generateMockStockData(symbol: string): StockData {
           targetPrice: currentPrice * (1 + Math.random() * 0.3 - 0.1)
         }
       },
-      news,
       patterns,
       upcomingEvents: [
         {
@@ -1109,10 +1108,25 @@ export function generateMockStockData(symbol: string): StockData {
           signal: 0,
           histogram: 0
         },
-        bollingerUpper: 0,
-        bollingerLower: 0,
+        bollingerBands: {
+          upper: 0,
+          middle: 0,
+          lower: 0,
+          width: 0
+        },
         ma50: 0,
-        ma200: 0
+        ma200: 0,
+        ema20: 0,
+        ema50: 0,
+        atr: 0,
+        obv: 0,
+        stochastic: {
+          k: 0,
+          d: 0
+        },
+        adx: 0,
+        supportLevels: [],
+        resistanceLevels: []
       },
       fundamentals: {
         pe: 15,
