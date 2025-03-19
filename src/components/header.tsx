@@ -43,11 +43,26 @@ function Header() {
               AI 서비스
             </button>
             <button
+              onClick={() => scrollToSection('blog')}
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              블로그
+            </button>
+            <button
               onClick={() => scrollToSection('gpts')}
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               GPTs
             </button>
+            <Link 
+              href="/blog" 
+              className={cn(
+                "transition-colors hover:text-foreground",
+                pathname.startsWith('/blog') ? "text-foreground font-medium" : "text-foreground/60"
+              )}
+            >
+              블로그 전체보기
+            </Link>
           </nav>
         </div>
         <div className="ml-auto flex items-center space-x-4">

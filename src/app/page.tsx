@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Sparkles, Flame, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles, Flame, Star, Book, Lightbulb, ArrowDown } from 'lucide-react';
+import { motion, useScroll, useSpring, useInView } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
+import { LatestBlogPosts } from '@/features/blog/components/LatestBlogPosts';
+import { useRef, useState } from 'react';
 
 interface CardData {
   title: string;
@@ -17,16 +19,77 @@ interface CardData {
   badge?: string;
 }
 
+// 컨테이너 애니메이션 설정 (간소화)
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+// 카드 애니메이션 설정 (최적화)
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 150,
+      damping: 15
+    }
+  },
+  hover: {
+    y: -5,
+    scale: 1.02,
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+    transition: {
+      type: "spring",
+      stiffness: 200,
+      damping: 15
+    }
+  }
+};
+
 export default function Home() {
+  // 스크롤 진행률 추적
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+  
+  // 호버 상태 관리
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  
+  // 섹션 참조 및 뷰포트 내 여부 확인
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const blogRef = useRef<HTMLDivElement>(null);
+  const gptsRef = useRef<HTMLDivElement>(null);
+  
+  const servicesInView = useInView(servicesRef, { once: false, amount: 0.1 });
+  const blogInView = useInView(blogRef, { once: false, amount: 0.1 });
+  const gptsInView = useInView(gptsRef, { once: false, amount: 0.1 });
+  
   // AI 서비스 카테고리 카드
   const aiServiceCards = [
+    {
+      title: '유명인 책 추천기',
+      description: '유명인들이 읽은 책과 유사한 책을 AI가 추천해 드립니다.',
+      href: '/celebrity-books',
+      icon: '📚',
+      isExternal: false,
+      badge: '신규'
+    },
     {
       title: '유튜브 영상 요약',
       description: '유튜브 영상의 내용을 AI가 요약해 핵심만 빠르게 파악하세요.',
       href: '/youtube-insight',
       icon: '📺',
       isExternal: false,
-      badge: '신규'
+      badge: '인기'
     },
     {
       title: '음식 칼로리 측정기',
@@ -63,8 +126,7 @@ export default function Home() {
       description: '당신의 운세에 맞는 로또 번호를 AI가 추천해 드립니다.',
       href: '/lotto-generator',
       icon: '🎱',
-      isExternal: false,
-      badge: '신규'
+      isExternal: false
     },
     {
       title: '주식 분석기',
@@ -87,8 +149,7 @@ export default function Home() {
       description: '알약 이미지로 약품 정보 확인',
       href: '/pill-camera',
       icon: '💊',
-      isExternal: false,
-      badge: '신규'
+      isExternal: false
     }
   ];
 
@@ -138,56 +199,54 @@ export default function Home() {
     }
   ];
 
-  // 카드 렌더링 함수
+  // 카드 렌더링 함수 (간소화)
   const renderCards = (cards: CardData, index: number) => (
     <motion.div
       key={cards.title + index}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
-      whileHover={{ scale: 1.03 }}
+      variants={cardVariants}
       className="h-full"
+      whileHover="hover"
+      onMouseEnter={() => setHoveredIndex(index)}
+      onMouseLeave={() => setHoveredIndex(null)}
     >
       {cards.isExternal ? (
         <a href={cards.href} target="_blank" rel="noopener noreferrer" className="block h-full">
-          <Card className="h-full border-2 border-gray-100 hover:border-orange-500 transition-all duration-300 shadow-sm hover:shadow-md">
-            <CardHeader>
-              <div className="text-4xl mb-4">{cards.icon}</div>
-              <CardTitle className="text-xl font-bold text-orange-600 flex items-center gap-2">
+          <Card className="h-full border border-gray-200 hover:border-orange-500 transition-all duration-300 shadow-sm hover:shadow-md">
+            <CardHeader className="pb-2">
+              <div className="text-3xl mb-3">{cards.icon}</div>
+              <CardTitle className="text-lg font-bold text-orange-600 flex items-center gap-2">
                 {cards.title}
                 <ExternalLink className="h-4 w-4 text-gray-400" />
               </CardTitle>
-              <CardDescription className="text-gray-600">{cards.description}</CardDescription>
+              <CardDescription className="text-gray-600 line-clamp-2">{cards.description}</CardDescription>
             </CardHeader>
-            <CardFooter>
-              <div className="text-orange-600 font-medium flex items-center">
+            <CardFooter className="pt-2">
+              <div className="text-orange-600 font-medium flex items-center text-sm">
                 바로가기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ArrowRight className="ml-1 h-3 w-3" />
               </div>
             </CardFooter>
           </Card>
         </a>
       ) : (
         <Link href={cards.href} className="block h-full">
-          <Card className="h-full border-2 border-gray-100 hover:border-orange-500 transition-all duration-300 shadow-sm hover:shadow-md">
-            <CardHeader className="relative">
+          <Card className="h-full border border-gray-200 hover:border-orange-500 transition-all duration-300 shadow-sm hover:shadow-md relative">
+            <CardHeader className="relative pb-2">
               {cards.badge && (
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-2 right-2">
                   {cards.badge === '인기' ? (
-                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
-                      <Flame className="h-4 w-4 mr-1 animate-pulse" />
+                    <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-2 py-1 text-xs rounded-full">
+                      <Flame className="h-3 w-3 mr-1" />
                       인기
                     </Badge>
                   ) : cards.badge === '신규' ? (
-                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
-                      <Sparkles className="h-4 w-4 mr-1 animate-pulse" />
+                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-2 py-1 text-xs rounded-full">
+                      <Sparkles className="h-3 w-3 mr-1" />
                       신규
                     </Badge>
                   ) : cards.badge === '개발중' ? (
-                    <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-lg px-3 py-1.5 rounded-full">
-                      <Star className="h-4 w-4 mr-1 animate-pulse" />
+                    <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-2 py-1 text-xs rounded-full">
+                      <Star className="h-3 w-3 mr-1" />
                       개발중
                     </Badge>
                   ) : (
@@ -197,16 +256,14 @@ export default function Home() {
                   )}
                 </div>
               )}
-              <div className="text-4xl mb-4">{cards.icon}</div>
-              <CardTitle className="text-xl font-bold text-orange-600">{cards.title}</CardTitle>
-              <CardDescription className="text-gray-600">{cards.description}</CardDescription>
+              <div className="text-3xl mb-3">{cards.icon}</div>
+              <CardTitle className="text-lg font-bold text-orange-600">{cards.title}</CardTitle>
+              <CardDescription className="text-gray-600 line-clamp-2">{cards.description}</CardDescription>
             </CardHeader>
-            <CardFooter>
-              <div className="text-orange-600 font-medium flex items-center">
+            <CardFooter className="pt-2">
+              <div className="text-orange-600 font-medium flex items-center text-sm">
                 자세히 보기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ArrowRight className="ml-1 h-3 w-3" />
               </div>
             </CardFooter>
           </Card>
@@ -216,28 +273,184 @@ export default function Home() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between text-sm">
-        <section className="mb-16">
-          <h1 className="text-4xl font-bold mb-4">AI 탐구생활</h1>
-          <p className="text-xl text-gray-600 mb-8">
-            AI로 더 나은 삶을 만들어가는 공간
-          </p>
+    <main className="flex min-h-screen flex-col items-center justify-between p-4 sm:p-6 md:p-10 lg:p-16 bg-white overflow-hidden">
+      {/* 스크롤 진행률 표시 */}
+      <motion.div 
+        className="fixed top-0 left-0 right-0 h-1 bg-orange-500 z-50 origin-left"
+        style={{ scaleX }}
+      />
+      
+      <div className="z-10 max-w-6xl w-full items-center justify-between">
+        {/* 히어로 섹션 - 단순화 */}
+        <section className="mb-16 py-8 md:py-16 relative">
+          <div className="max-w-3xl mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center"
+            >
+              <motion.div 
+                className="flex justify-center mb-6"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="inline-flex items-center justify-center p-3 bg-orange-500 rounded-full shadow-md">
+                  <Lightbulb className="text-white" size={32} />
+                </div>
+              </motion.div>
+              
+              <motion.h1 
+                className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-orange-600"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                AI 탐구생활
+              </motion.h1>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="text-lg md:text-xl text-gray-700 mb-8 max-w-2xl mx-auto"
+              >
+                AI로 더 나은 삶을 만들어가는 공간
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="flex flex-wrap justify-center gap-3 mt-8"
+              >
+                <a href="#ai-services">
+                  <Button className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-5 rounded-md shadow-sm">
+                    AI 서비스 둘러보기
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
+                
+                <a href="#blog">
+                  <Button variant="outline" className="border border-orange-500 text-orange-600 hover:bg-orange-50 py-2 px-5 rounded-md shadow-sm">
+                    블로그
+                    <Book className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
+              </motion.div>
+            </motion.div>
+            
+            <motion.div
+              className="absolute bottom-[-30px] left-1/2 transform -translate-x-1/2 text-orange-500"
+              animate={{ 
+                y: [0, 6, 0],
+              }}
+              transition={{
+                repeat: Infinity,
+                repeatType: "reverse",
+                duration: 1.5,
+                ease: "easeInOut"
+              }}
+            >
+              <ArrowDown size={24} />
+            </motion.div>
+          </div>
         </section>
 
-        <section id="ai-services" className="mb-16">
-          <h2 className="text-2xl font-bold mb-6">AI 서비스</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* AI 서비스 섹션 */}
+        <section id="ai-services" className="mb-16 px-4" ref={servicesRef}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={servicesInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="mb-6"
+          >
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">AI 서비스</h2>
+            <div className="w-16 h-1 bg-orange-500 rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl">
+              다양한 일상 속 문제를 AI의 도움으로 해결해보세요.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate={servicesInView ? "visible" : "hidden"}
+          >
             {aiServiceCards.map((card, index) => renderCards(card, index))}
-          </div>
+          </motion.div>
         </section>
 
-        <section id="gpts" className="mb-16">
-          <h2 className="text-2xl font-bold mb-6">GPTs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {gptsCards.map((card, index) => renderCards(card, index))}
-          </div>
+        {/* 블로그 섹션 */}
+        <section id="blog" className="mb-16 px-4" ref={blogRef}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={blogInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="mb-6"
+          >
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">블로그</h2>
+            <div className="w-16 h-1 bg-orange-500 rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl">
+              AI에 관한 유용한 정보와 인사이트를 공유합니다.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={blogInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <LatestBlogPosts />
+          </motion.div>
+          
+          <motion.div 
+            className="flex justify-center mt-6"
+            initial={{ opacity: 0 }}
+            animate={blogInView ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Link href="/blog">
+              <Button variant="outline" className="border border-orange-500 text-orange-600 hover:bg-orange-50 py-2 px-4 rounded-md shadow-sm">
+                블로그 더 보기
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </motion.div>
         </section>
+
+        {/* GPTs 섹션 */}
+        <section id="gpts" className="mb-16 px-4" ref={gptsRef}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={gptsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="mb-6"
+          >
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">GPTs</h2>
+            <div className="w-16 h-1 bg-orange-500 rounded-full mb-4"></div>
+            <p className="text-gray-600 max-w-2xl">
+              특별한 목적에 맞게 개발된 GPT 모델을 활용해보세요.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate={gptsInView ? "visible" : "hidden"}
+          >
+            {gptsCards.map((card, index) => renderCards(card, index))}
+          </motion.div>
+        </section>
+        
+        {/* 푸터 */}
+        <footer className="border-t border-gray-200 py-6 mt-8 text-center text-gray-500 px-4">
+          <p>© 2024 AI 탐구생활. All rights reserved.</p>
+        </footer>
       </div>
     </main>
   );

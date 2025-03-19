@@ -258,12 +258,12 @@ export default function StockAnalyzer() {
           }
         ];
       }
-      setEconomicData(economicResult);
+      setEconomicData(Array.isArray(economicResult) ? economicResult : []);
       
       // AI 예측 생성
       let predictionResult;
       try {
-        predictionResult = await generatePrediction(ticker, stockResult, economicResult);
+        predictionResult = await generatePrediction(stockResult, Array.isArray(economicResult) ? economicResult : []);
       } catch (predictionError) {
         console.error('예측 생성 오류:', predictionError);
         
@@ -871,7 +871,7 @@ function ResultsDisplay({
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {(economicData || []).map((indicator, index) => (
+                    {(Array.isArray(economicData) ? economicData : []).map((indicator, index) => (
                       <div key={index} className="border rounded-lg p-3">
                         <p className="text-sm text-gray-500">{indicator.name}</p>
                         <div className="flex items-end gap-2 mt-1">
@@ -885,7 +885,7 @@ function ResultsDisplay({
                         <p className="text-xs text-gray-400 mt-1">출처: {indicator.source || '미상'}</p>
                       </div>
                     ))}
-                    {(!economicData || economicData.length === 0) && (
+                    {(!economicData || !Array.isArray(economicData) || economicData.length === 0) && (
                       <div className="col-span-full text-center py-4 text-gray-500">
                         경제 지표 데이터가 없습니다.
                       </div>

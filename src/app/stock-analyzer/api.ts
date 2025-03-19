@@ -47,19 +47,25 @@ export const fetchStockData = async (symbol: string): Promise<StockData> => {
     
     console.log('Yahoo Finance API 호출 시작:', symbol);
     
-    // API 호출 시작
     try {
-      // 서버 사이드 API 호출
-      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}`);
+      // 서버 사이드 API 호출로 대체
+      const response = await fetch(`/api/yahoo-finance?symbol=${encodeURIComponent(symbol)}`);
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`API 응답 오류: ${response.status} ${errorText}`);
         throw new Error(`API 응답 오류: ${response.status} ${errorText}`);
       }
       
       const data = await response.json();
       
-      // 로컬 스토리지에 캐시 저장 (브라우저 환경에서만)
+      // 데이터 유효성 검사
+      if (!data || !data.ticker || !data.currentPrice) {
+        console.error('유효하지 않은 주식 데이터:', data);
+        throw new Error('유효하지 않은 주식 데이터가 반환되었습니다.');
+      }
+      
+      // 로컬 스토리지에 캐시 저장
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(
@@ -78,12 +84,13 @@ export const fetchStockData = async (symbol: string): Promise<StockData> => {
       return data;
     } catch (apiError) {
       console.error('Yahoo Finance API 호출 오류:', apiError);
-      // 오류 발생 시에는 모의 데이터 반환
-      console.log('모의 주식 데이터:', symbol);
+      // 오류 발생 시 모의 데이터 반환
+      console.log('모의 주식 데이터 생성:', symbol);
       return generateMockStockData(symbol);
     }
   } catch (error) {
     console.error('주식 데이터 가져오기 오류:', error);
+    console.log('모의 주식 데이터 생성:', symbol);
     return generateMockStockData(symbol);
   }
 };
@@ -122,13 +129,13 @@ const generateMockStockData = (symbol: string): StockData => {
   
   // MACD 계산 (간단한 모의 데이터)
   const macdValue = parseFloat((Math.random() * 4 - 2).toFixed(2));
-  const macdSignal = parseFloat((macdValue + (Math.random() - 0.5)).toFixed(2));
+  const macdSignal = parseFloat((macdValue + (Math.random() * 2 - 1)).toFixed(2));
   const macdHistogram = parseFloat((macdValue - macdSignal).toFixed(2));
   
   // 볼린저 밴드 계산 (간단한 모의 데이터)
   const bollingerMiddle = currentPrice;
-  const bollingerUpper = parseFloat((bollingerMiddle + Math.random() * 20).toFixed(2));
-  const bollingerLower = parseFloat((bollingerMiddle - Math.random() * 20).toFixed(2));
+  const bollingerUpper = parseFloat((bollingerMiddle * (1 + 0.05 * Math.random())).toFixed(2));
+  const bollingerLower = parseFloat((bollingerMiddle * (1 - 0.05 * Math.random())).toFixed(2));
   const bollingerWidth = parseFloat(((bollingerUpper - bollingerLower) / bollingerMiddle).toFixed(2));
   
   return {
@@ -160,11 +167,11 @@ const generateMockStockData = (symbol: string): StockData => {
         lower: bollingerLower,
         width: bollingerWidth
       },
-      ma50: parseFloat((currentPrice * (1 + (Math.random() - 0.5) * 0.1)).toFixed(2)),
-      ma200: parseFloat((currentPrice * (1 + (Math.random() - 0.5) * 0.2)).toFixed(2)),
-      ema20: parseFloat((currentPrice * (1 + (Math.random() - 0.5) * 0.05)).toFixed(2)),
-      ema50: parseFloat((currentPrice * (1 + (Math.random() - 0.5) * 0.1)).toFixed(2)),
-      atr: parseFloat((currentPrice * 0.02).toFixed(2)),
+      ma50: parseFloat((currentPrice * 0.95).toFixed(2)),
+      ma200: parseFloat((currentPrice * 0.9).toFixed(2)),
+      ema20: parseFloat((currentPrice * 0.97).toFixed(2)),
+      ema50: parseFloat((currentPrice * 0.94).toFixed(2)),
+      atr: parseFloat((currentPrice * 0.03).toFixed(2)),
       obv: Math.floor(Math.random() * 10000000),
       stochastic: {
         k: Math.floor(Math.random() * 100),
@@ -213,6 +220,29 @@ const generateMockStockData = (symbol: string): StockData => {
         targetPrice: parseFloat((currentPrice * (1 + (Math.random() * 0.3))).toFixed(2))
       }
     },
+    news: [
+      {
+        title: `${symbol.toUpperCase()} Reports Strong Quarterly Results`,
+        source: 'Financial Times',
+        date: '2023-05-15',
+        url: '#',
+        sentiment: 'positive' as const
+      },
+      {
+        title: `${symbol.toUpperCase()} Announces New Product Line`,
+        source: 'Bloomberg',
+        date: '2023-05-10',
+        url: '#',
+        sentiment: 'positive' as const
+      },
+      {
+        title: `Analysts Raise Price Target for ${symbol.toUpperCase()}`,
+        source: 'CNBC',
+        date: '2023-05-05',
+        url: '#',
+        sentiment: 'positive' as const
+      }
+    ],
     patterns: [
       {
         name: Math.random() > 0.5 ? 'Double Bottom' : 'Head and Shoulders',
@@ -288,15 +318,40 @@ export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> =>
         throw new Error(`API 응답 오류: ${response.status} ${errorText}`);
       }
       
-      const data = await response.json();
+      const apiData = await response.json();
       
+      // API 응답이 배열이 아니면 모의 데이터 생성
+      if (!Array.isArray(apiData)) {
+        // API 응답 데이터를 EconomicIndicator[] 형식으로 변환
+        const formattedData: EconomicIndicator[] = formatEconomicData(apiData);
+        
+        // 로컬 스토리지에 캐시 저장 (브라우저 환경에서만)
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(
+              cacheKey,
+              JSON.stringify({
+                data: formattedData,
+                timestamp: Date.now()
+              })
+            );
+          } catch (storageError) {
+            console.error('로컬 스토리지 저장 오류:', storageError);
+          }
+        }
+        
+        console.log('FRED API 호출 완료');
+        return formattedData;
+      }
+      
+      // 이미 배열 형태로 반환된 경우 그대로 사용
       // 로컬 스토리지에 캐시 저장 (브라우저 환경에서만)
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(
             cacheKey,
             JSON.stringify({
-              data,
+              data: apiData,
               timestamp: Date.now()
             })
           );
@@ -306,7 +361,7 @@ export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> =>
       }
       
       console.log('FRED API 호출 완료');
-      return data;
+      return apiData;
     } catch (apiError) {
       console.error('FRED API 호출 오류:', apiError);
       // 오류 발생 시에는 모의 데이터 반환
@@ -319,68 +374,233 @@ export const fetchEconomicIndicators = async (): Promise<EconomicIndicator[]> =>
   }
 };
 
-// 모의 경제 지표 데이터 생성
-const generateMockEconomicIndicators = (): EconomicIndicator[] => {
-  const indicators = [
-    {
-      name: 'GDP Growth Rate',
-      nameKr: 'GDP 성장률',
-      value: parseFloat((Math.random() * 5 - 1).toFixed(2)),
-      unit: '%',
-      change: parseFloat((Math.random() * 2 - 1).toFixed(2)),
-      previousPeriod: 'Q1 2023',
-      source: 'FRED',
-      description: 'Quarterly GDP growth rate, seasonally adjusted.',
-      impact: Math.random() > 0.6 ? 'positive' : (Math.random() > 0.3 ? 'neutral' : 'negative') as 'positive' | 'negative' | 'neutral'
-    },
-    {
-      name: 'Unemployment Rate',
-      nameKr: '실업률',
-      value: parseFloat((Math.random() * 6 + 3).toFixed(2)),
-      unit: '%',
-      change: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
-      previousPeriod: 'May 2023',
-      source: 'FRED',
-      description: 'Monthly unemployment rate, seasonally adjusted.',
-      impact: Math.random() > 0.6 ? 'negative' : (Math.random() > 0.3 ? 'neutral' : 'positive') as 'positive' | 'negative' | 'neutral'
-    },
-    {
-      name: 'Inflation Rate (CPI)',
-      nameKr: '인플레이션율 (CPI)',
-      value: parseFloat((Math.random() * 8 + 1).toFixed(2)),
-      unit: '%',
-      change: parseFloat((Math.random() * 2 - 1).toFixed(2)),
-      previousPeriod: 'May 2023',
-      source: 'FRED',
-      description: 'Consumer Price Index, year-over-year change.',
-      impact: Math.random() > 0.7 ? 'negative' : (Math.random() > 0.3 ? 'neutral' : 'positive') as 'positive' | 'negative' | 'neutral'
-    },
-    {
-      name: 'Federal Funds Rate',
-      nameKr: '연방기금금리',
-      value: parseFloat((Math.random() * 5 + 0.5).toFixed(2)),
-      unit: '%',
-      change: parseFloat((Math.random() * 0.5 - 0.25).toFixed(2)),
-      previousPeriod: 'June 2023',
-      source: 'FRED',
-      description: 'Target federal funds rate set by the Federal Reserve.',
-      impact: Math.random() > 0.5 ? 'neutral' : (Math.random() > 0.3 ? 'negative' : 'positive') as 'positive' | 'negative' | 'neutral'
-    },
-    {
-      name: 'Retail Sales',
-      nameKr: '소매 판매',
-      value: parseFloat((Math.random() * 10 - 2).toFixed(2)),
-      unit: '%',
-      change: parseFloat((Math.random() * 4 - 2).toFixed(2)),
-      previousPeriod: 'May 2023',
-      source: 'FRED',
-      description: 'Monthly retail sales growth, year-over-year.',
-      impact: Math.random() > 0.6 ? 'positive' : (Math.random() > 0.3 ? 'neutral' : 'negative') as 'positive' | 'negative' | 'neutral'
+// API 응답 데이터를 EconomicIndicator[] 형식으로 변환하는 함수
+function formatEconomicData(apiData: any): EconomicIndicator[] {
+  const indicators: EconomicIndicator[] = [];
+  
+  // GDP 성장률
+  if (apiData.gdp) {
+    const gdpData = apiData.gdp.observations;
+    if (gdpData && gdpData.length > 1) {
+      const current = parseFloat(gdpData[0].value);
+      const previous = parseFloat(gdpData[1].value);
+      const change = current - previous;
+      
+      indicators.push({
+        name: 'GDP Growth Rate',
+        nameKr: 'GDP 성장률',
+        value: current,
+        unit: '%',
+        change,
+        previousPeriod: '전분기',
+        source: 'FRED',
+        description: '국내 총생산 성장률',
+        impact: change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'
+      });
     }
-  ];
+  }
+  
+  // 실업률
+  if (apiData.unemployment) {
+    const unemploymentData = apiData.unemployment.observations;
+    if (unemploymentData && unemploymentData.length > 1) {
+      const current = parseFloat(unemploymentData[0].value);
+      const previous = parseFloat(unemploymentData[1].value);
+      const change = current - previous;
+      
+      indicators.push({
+        name: 'Unemployment Rate',
+        nameKr: '실업률',
+        value: current,
+        unit: '%',
+        change,
+        previousPeriod: '전월',
+        source: 'FRED',
+        description: '노동 인구 중 실업자 비율',
+        impact: change < 0 ? 'positive' : change > 0 ? 'negative' : 'neutral'
+      });
+    }
+  }
+  
+  // 인플레이션
+  if (apiData.inflation) {
+    const inflationData = apiData.inflation.observations;
+    if (inflationData && inflationData.length > 1) {
+      const current = parseFloat(inflationData[0].value);
+      const previous = parseFloat(inflationData[1].value);
+      const change = current - previous;
+      
+      indicators.push({
+        name: 'Inflation Rate (CPI)',
+        nameKr: '인플레이션율 (CPI)',
+        value: current,
+        unit: '%',
+        change,
+        previousPeriod: '전월',
+        source: 'FRED',
+        description: '소비자 물가 상승률',
+        impact: change < 0 ? 'positive' : change > 0 ? 'negative' : 'neutral'
+      });
+    }
+  }
+  
+  // 기준금리
+  if (apiData.interest_rate) {
+    const interestData = apiData.interest_rate.observations;
+    if (interestData && interestData.length > 1) {
+      const current = parseFloat(interestData[0].value);
+      const previous = parseFloat(interestData[1].value);
+      const change = current - previous;
+      
+      indicators.push({
+        name: 'Interest Rate',
+        nameKr: '기준금리',
+        value: current,
+        unit: '%',
+        change,
+        previousPeriod: '전월',
+        source: 'FRED',
+        description: '중앙은행 기준 금리',
+        impact: 'neutral'
+      });
+    }
+  }
+  
+  // 10년 국채 수익률
+  if (apiData.treasury_10y) {
+    const treasuryData = apiData.treasury_10y.observations;
+    if (treasuryData && treasuryData.length > 1) {
+      const current = parseFloat(treasuryData[0].value);
+      const previous = parseFloat(treasuryData[1].value);
+      const change = current - previous;
+      
+      indicators.push({
+        name: '10-Year Treasury Yield',
+        nameKr: '10년 국채 수익률',
+        value: current,
+        unit: '%',
+        change,
+        previousPeriod: '전일',
+        source: 'FRED',
+        description: '10년 만기 국채 수익률',
+        impact: change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'
+      });
+    }
+  }
+  
+  // 데이터가 없으면 모의 데이터 반환
+  if (indicators.length === 0) {
+    return generateMockEconomicIndicators();
+  }
   
   return indicators;
+}
+
+// 모의 경제 지표 데이터 생성
+export const generateMockEconomicIndicators = (): EconomicIndicator[] => {
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  return [
+    {
+      id: 'GDP',
+      name: 'GDP Growth Rate',
+      nameKr: 'GDP 성장률',
+      category: 'output',
+      value: parseFloat((Math.random() * 5 - 1).toFixed(2)),
+      unit: '%',
+      date: currentDate,
+      monthlyChange: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
+      yearlyChange: parseFloat((Math.random() * 2 - 1).toFixed(2)),
+      trend: Math.random() > 0.6 ? 'up' : (Math.random() > 0.3 ? 'stable' : 'down') as 'up' | 'down' | 'stable',
+      impact: Math.random() > 0.6 ? 'positive' : (Math.random() > 0.3 ? 'neutral' : 'negative') as 'positive' | 'negative' | 'neutral',
+      description: 'Quarterly GDP growth rate, seasonally adjusted.',
+      descriptionKr: '분기별 GDP 성장률, 계절 조정됨.',
+      historicalData: generateMockHistoricalData(3, 5, 12)
+    },
+    {
+      id: 'UNRATE',
+      name: 'Unemployment Rate',
+      nameKr: '실업률',
+      category: 'labor',
+      value: parseFloat((Math.random() * 6 + 3).toFixed(2)),
+      unit: '%',
+      date: currentDate,
+      monthlyChange: parseFloat((Math.random() * 0.5 - 0.25).toFixed(2)),
+      yearlyChange: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
+      trend: Math.random() > 0.6 ? 'down' : (Math.random() > 0.3 ? 'stable' : 'up') as 'up' | 'down' | 'stable',
+      impact: Math.random() > 0.6 ? 'negative' : (Math.random() > 0.3 ? 'neutral' : 'positive') as 'positive' | 'negative' | 'neutral',
+      description: 'Monthly unemployment rate, seasonally adjusted.',
+      descriptionKr: '월별 실업률, 계절 조정됨.',
+      historicalData: generateMockHistoricalData(3, 6, 12)
+    },
+    {
+      id: 'CPIAUCSL',
+      name: 'Inflation Rate (CPI)',
+      nameKr: '인플레이션율 (CPI)',
+      category: 'prices',
+      value: parseFloat((Math.random() * 8 + 1).toFixed(2)),
+      unit: '%',
+      date: currentDate,
+      monthlyChange: parseFloat((Math.random() * 0.5 - 0.1).toFixed(2)),
+      yearlyChange: parseFloat((Math.random() * 2 - 0.5).toFixed(2)),
+      trend: Math.random() > 0.5 ? 'up' : (Math.random() > 0.3 ? 'stable' : 'down') as 'up' | 'down' | 'stable',
+      impact: Math.random() > 0.7 ? 'positive' : 'negative' as 'positive' | 'negative' | 'neutral',
+      description: 'Consumer Price Index, annual change.',
+      descriptionKr: '소비자 물가 지수, 연간 변화율.',
+      historicalData: generateMockHistoricalData(1, 8, 12)
+    },
+    {
+      id: 'FEDFUNDS',
+      name: 'Interest Rate',
+      nameKr: '기준금리',
+      category: 'interest_rates',
+      value: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+      unit: '%',
+      date: currentDate,
+      monthlyChange: parseFloat((Math.random() * 0.25 - 0.1).toFixed(2)),
+      yearlyChange: parseFloat((Math.random() * 1 - 0.25).toFixed(2)),
+      trend: Math.random() > 0.5 ? 'stable' : (Math.random() > 0.3 ? 'up' : 'down') as 'up' | 'down' | 'stable',
+      impact: 'neutral' as 'positive' | 'negative' | 'neutral',
+      description: 'Federal funds effective rate.',
+      descriptionKr: '연방기금 실효금리.',
+      historicalData: generateMockHistoricalData(1, 5, 12)
+    },
+    {
+      id: 'T10Y2Y',
+      name: '10-Year Treasury Yield',
+      nameKr: '10년 국채 수익률',
+      category: 'interest_rates',
+      value: parseFloat((Math.random() * 4 + 1).toFixed(2)),
+      unit: '%',
+      date: currentDate,
+      monthlyChange: parseFloat((Math.random() * 0.3 - 0.15).toFixed(2)),
+      yearlyChange: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
+      trend: Math.random() > 0.5 ? 'up' : (Math.random() > 0.3 ? 'stable' : 'down') as 'up' | 'down' | 'stable',
+      impact: Math.random() > 0.5 ? 'positive' : 'negative' as 'positive' | 'negative' | 'neutral',
+      description: '10-Year Treasury Constant Maturity Rate.',
+      descriptionKr: '10년 만기 국채 수익률.',
+      historicalData: generateMockHistoricalData(1, 4, 12)
+    }
+  ];
 };
+
+// 모의 과거 데이터 생성 함수
+function generateMockHistoricalData(baseValue: number, maxValue: number, count: number) {
+  const result = [];
+  const currentDate = new Date();
+  
+  for (let i = 0; i < count; i++) {
+    const date = new Date();
+    date.setMonth(currentDate.getMonth() - i);
+    
+    result.push({
+      date: date.toISOString().split('T')[0],
+      value: parseFloat((baseValue + Math.random() * (maxValue - baseValue)).toFixed(2))
+    });
+  }
+  
+  return result;
+}
 
 // 현재 날짜를 YYYY-MM-DD 형식으로 반환하는 함수
 const getCurrentDate = (): string => {
@@ -396,25 +616,24 @@ const getOneYearAgoDate = (): string => {
 };
 
 // 주식 예측 생성
-export const generatePrediction = async (
-  stockData: StockData,
-  economicIndicators: EconomicIndicator[]
-): Promise<PredictionResult> => {
+export const generatePrediction = async (stockData: StockData, economicIndicators: EconomicIndicator[] = [], modelType: string = 'transformer', predictionPeriod: string = 'all'): Promise<PredictionResult> => {
   try {
-    console.log('AI 분석 시작');
+    console.log('AI 분석 시작:', stockData.ticker);
     
-    // API 호출 시작
     try {
-      // 서버 사이드 API 호출
+      // API 호출
       const response = await fetch('/api/predict-stock', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          symbol: stockData.ticker,
           stockData,
-          economicIndicators
-        }),
+          economicIndicators,
+          modelType,
+          predictionPeriod
+        })
       });
       
       if (!response.ok) {
@@ -422,13 +641,24 @@ export const generatePrediction = async (
         throw new Error(`API 응답 오류: ${response.status} ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('AI 분석 완료');
-      return data;
+      const responseData = await response.json();
+      console.log('AI 분석 완료:', stockData.ticker);
+      
+      // 응답 데이터 구조 확인 및 처리
+      if (responseData.prediction) {
+        // prediction 필드가 있는 경우 (API 응답 구조가 { prediction: PredictionResult, ... })
+        return responseData.prediction;
+      } else if (responseData.shortTermPrediction !== undefined) {
+        // 직접 PredictionResult 객체가 반환된 경우
+        return responseData;
+      } else {
+        console.error('예상치 못한 API 응답 구조:', responseData);
+        throw new Error('예상치 못한 API 응답 구조');
+      }
     } catch (apiError) {
       console.error('AI 분석 API 호출 오류:', apiError);
       // 오류 발생 시에는 모의 데이터 반환
-      console.log('모의 AI 분석 데이터');
+      console.log('모의 AI 분석 데이터 생성:', stockData.ticker);
       return generateMockLSTMPrediction(stockData);
     }
   } catch (error) {
@@ -441,62 +671,114 @@ export const generatePrediction = async (
 const generateMockLSTMPrediction = (stockData: StockData): PredictionResult => {
   const currentPrice = stockData.currentPrice;
   const currentDate = new Date();
+  const ticker = stockData.ticker;
+  const companyName = stockData.companyName;
+  const sector = stockData.sector || '기술';
+  const industry = stockData.industry || '소프트웨어';
   
-  // 단기, 중기, 장기 예측 생성
-  const shortTermDays = 7;
-  const mediumTermDays = 30;
-  const longTermDays = 90;
+  // 기술적 지표 분석
+  const rsi = stockData.technicalIndicators?.rsi || 50;
+  const macd = stockData.technicalIndicators?.macd?.value || 0;
+  const ma50 = stockData.technicalIndicators?.ma50 || currentPrice * 0.95;
+  const ma200 = stockData.technicalIndicators?.ma200 || currentPrice * 0.9;
   
-  // 변동성 설정
-  const shortTermVolatility = 0.05; // 5%
-  const mediumTermVolatility = 0.10; // 10%
-  const longTermVolatility = 0.20; // 20%
+  // 기본적 지표 분석
+  const pe = stockData.fundamentals?.pe || 15;
+  const eps = stockData.fundamentals?.eps || currentPrice / 15;
+  const dividendYield = stockData.fundamentals?.dividendYield || 2;
   
-  // 예측 방향 (상승 또는 하락)
-  const trend = Math.random() > 0.5 ? 1 : -1;
+  // 모멘텀 분석
+  const shortTermMomentum = stockData.momentum?.shortTerm || 0;
+  const mediumTermMomentum = stockData.momentum?.mediumTerm || 0;
+  const longTermMomentum = stockData.momentum?.longTerm || 0;
   
-  // 단기 예측
-  const shortTermChange = trend * (Math.random() * shortTermVolatility);
-  const shortTermPrice = parseFloat((currentPrice * (1 + shortTermChange)).toFixed(2));
-  const shortTermProbability = parseFloat((0.5 + Math.random() * 0.3).toFixed(2));
-  const shortTermRangeMin = parseFloat((shortTermPrice * 0.95).toFixed(2));
-  const shortTermRangeMax = parseFloat((shortTermPrice * 1.05).toFixed(2));
+  // 시장 상황에 따른 변동성 조정
+  const volatility = 0.15; // 15% 변동성
   
-  // 중기 예측
-  const mediumTermChange = trend * (Math.random() * mediumTermVolatility);
-  const mediumTermPrice = parseFloat((currentPrice * (1 + mediumTermChange)).toFixed(2));
-  const mediumTermProbability = parseFloat((0.5 + Math.random() * 0.25).toFixed(2));
-  const mediumTermRangeMin = parseFloat((mediumTermPrice * 0.9).toFixed(2));
-  const mediumTermRangeMax = parseFloat((mediumTermPrice * 1.1).toFixed(2));
+  // 단기 예측 (1개월)
+  const shortTermChange = (Math.random() - 0.5) * volatility * 2 + (shortTermMomentum / 10);
+  const shortTermPrediction = parseFloat((currentPrice * (1 + shortTermChange)).toFixed(2));
   
-  // 장기 예측
-  const longTermChange = trend * (Math.random() * longTermVolatility);
-  const longTermPrice = parseFloat((currentPrice * (1 + longTermChange)).toFixed(2));
-  const longTermProbability = parseFloat((0.5 + Math.random() * 0.2).toFixed(2));
-  const longTermRangeMin = parseFloat((longTermPrice * 0.85).toFixed(2));
-  const longTermRangeMax = parseFloat((longTermPrice * 1.15).toFixed(2));
+  // 중기 예측 (3개월)
+  const mediumTermChange = (Math.random() - 0.5) * volatility * 3 + (mediumTermMomentum / 10);
+  const mediumTermPrediction = parseFloat((currentPrice * (1 + mediumTermChange)).toFixed(2));
+  
+  // 장기 예측 (6개월)
+  const longTermChange = (Math.random() - 0.5) * volatility * 4 + (longTermMomentum / 10);
+  const longTermPrediction = parseFloat((currentPrice * (1 + longTermChange)).toFixed(2));
+  
+  // 신뢰도 점수 계산
+  const confidenceScore = Math.min(90, Math.max(30, 50 + Math.random() * 40));
+  
+  // 투자 추천 결정
+  let recommendation = '';
+  let recommendationReason = '';
+  
+  if (shortTermChange > 0.05 && mediumTermChange > 0.1) {
+    recommendation = '매수';
+    recommendationReason = `${ticker}의 단기 및 중기 전망이 긍정적이며, 현재 가격 대비 상승 가능성이 높습니다. 기술적 지표와 모멘텀이 강세를 보이고 있습니다.`;
+  } else if (shortTermChange < -0.05 && mediumTermChange < -0.1) {
+    recommendation = '매도';
+    recommendationReason = `${ticker}의 단기 및 중기 전망이 부정적이며, 현재 가격 대비 하락 가능성이 있습니다. 기술적 지표와 모멘텀이 약세를 보이고 있습니다.`;
+  } else {
+    recommendation = '관망';
+    recommendationReason = `${ticker}의 단기 및 중기 전망이 혼합되어 있어 현재 시점에서는 관망하는 것이 좋습니다. 추가적인 시장 신호를 기다려보세요.`;
+  }
+  
+  // 투자 강점 및 위험 요소
+  const strengths = [
+    `${companyName}은(는) ${sector} 산업에서 안정적인 입지를 갖추고 있습니다.`,
+    `배당 수익률 ${dividendYield}%로 안정적인 수익을 제공합니다.`,
+    `기술적 지표 중 ${rsi < 30 ? 'RSI가 과매도 구간에 있어 반등 가능성이 있습니다.' : 
+      rsi > 70 ? 'RSI가 과매수 구간에 있어 주의가 필요합니다.' : 
+      'RSI가 중립적인 수준에 있습니다.'}`
+  ];
+  
+  const risks = [
+    `${industry} 산업의 경쟁이 치열해지고 있습니다.`,
+    `글로벌 경제 불확실성이 ${ticker}의 실적에 영향을 줄 수 있습니다.`,
+    `${currentPrice > ma50 ? '현재 가격이 50일 이동평균선 위에 있어 단기적으로 과매수 상태일 수 있습니다.' : 
+      '현재 가격이 50일 이동평균선 아래에 있어 약세 추세가 지속될 수 있습니다.'}`
+  ];
+  
+  // 요약 생성
+  const summary = `${companyName}(${ticker})에 대한 AI 분석 결과, 단기(1개월) 예상 가격은 $${shortTermPrediction}, 중기(3개월) 예상 가격은 $${mediumTermPrediction}, 장기(6개월) 예상 가격은 $${longTermPrediction}입니다. 현재 ${recommendation} 의견이며, 신뢰도는 ${confidenceScore.toFixed(1)}%입니다. ${recommendationReason}`;
   
   // 가격 예측 데이터 생성
   const pricePredictions = [];
-  for (let i = 1; i <= longTermDays; i++) {
+  let lastPrice = currentPrice;
+  
+  for (let i = 1; i <= 180; i++) {
     const date = new Date();
     date.setDate(currentDate.getDate() + i);
     
-    let volatility;
-    if (i <= shortTermDays) {
-      volatility = shortTermVolatility * (i / shortTermDays);
-    } else if (i <= mediumTermDays) {
-      volatility = mediumTermVolatility * ((i - shortTermDays) / (mediumTermDays - shortTermDays));
+    // 일별 변동성 계산
+    const dailyVolatility = volatility / Math.sqrt(30);
+    
+    // 목표 가격 계산
+    let targetPrice;
+    if (i <= 30) {
+      // 단기: 현재가격에서 shortTermPrediction까지 선형 보간
+      targetPrice = currentPrice + (shortTermPrediction - currentPrice) * (i / 30);
+    } else if (i <= 90) {
+      // 중기: shortTermPrediction에서 mediumTermPrediction까지 선형 보간
+      targetPrice = shortTermPrediction + (mediumTermPrediction - shortTermPrediction) * ((i - 30) / 60);
     } else {
-      volatility = longTermVolatility * ((i - mediumTermDays) / (longTermDays - mediumTermDays));
+      // 장기: mediumTermPrediction에서 longTermPrediction까지 선형 보간
+      targetPrice = mediumTermPrediction + (longTermPrediction - mediumTermPrediction) * ((i - 90) / 90);
     }
     
-    const randomChange = trend * (Math.random() * volatility);
-    const predictedPrice = parseFloat((currentPrice * (1 + randomChange)).toFixed(2));
+    // 랜덤 워크 모델 적용
+    const randomWalk = (Math.random() - 0.5) * 2 * dailyVolatility * lastPrice;
+    const meanReversion = (targetPrice - lastPrice) * 0.05;
+    
+    // 새 가격 계산
+    const predictedPrice = parseFloat((lastPrice + randomWalk + meanReversion).toFixed(2));
+    lastPrice = predictedPrice;
     
     // 예측 범위 계산
-    const rangeMin = parseFloat((predictedPrice * 0.95).toFixed(2));
-    const rangeMax = parseFloat((predictedPrice * 1.05).toFixed(2));
+    const rangeMin = parseFloat((predictedPrice * (1 - dailyVolatility)).toFixed(2));
+    const rangeMax = parseFloat((predictedPrice * (1 + dailyVolatility)).toFixed(2));
     
     pricePredictions.push({
       date: date.toISOString().split('T')[0],
@@ -508,109 +790,181 @@ const generateMockLSTMPrediction = (stockData: StockData): PredictionResult => {
     });
   }
   
-  // 신뢰도 점수 계산
-  const confidenceScore = parseFloat((0.5 + Math.random() * 0.4).toFixed(2));
-  
   // 모델 정보
   const modelInfo = {
-    type: 'LSTM Neural Network',
+    type: 'Hybrid LSTM & Transformer Neural Network',
     accuracy: parseFloat((0.7 + Math.random() * 0.2).toFixed(2)),
     features: [
-      'Price History',
-      'Volume',
-      'Technical Indicators',
-      'Market Sentiment',
-      'Economic Indicators'
+      '과거 가격 데이터',
+      '거래량 분석',
+      '기술적 지표 (RSI, MACD, 볼린저 밴드)',
+      '이동평균선 분석',
+      '시장 심리 지표',
+      '경제 지표 상관관계',
+      '섹터 성과 분석',
+      '기본적 지표 분석'
     ],
-    trainPeriod: '2018-01-01 to ' + new Date().toISOString().split('T')[0]
+    trainPeriod: '2018-01-01 ~ ' + new Date().toISOString().split('T')[0]
   };
-  
-  // 요약 생성
-  const summary = trend > 0
-    ? `${stockData.ticker} shows a positive outlook with technical indicators suggesting a potential upward trend. The stock is expected to reach ${shortTermPrice} in the short term.`
-    : `${stockData.ticker} shows a negative outlook with technical indicators suggesting a potential downward trend. The stock is expected to reach ${shortTermPrice} in the short term.`;
-  
-  const summaryKr = trend > 0
-    ? `${stockData.ticker}의 전망은 긍정적이며 기술적 지표는 잠재적인 상승 추세를 나타냅니다. 단기적으로 ${shortTermPrice}까지 상승할 것으로 예상됩니다.`
-    : `${stockData.ticker}의 전망은 부정적이며 기술적 지표는 잠재적인 하락 추세를 나타냅니다. 단기적으로 ${shortTermPrice}까지 하락할 것으로 예상됩니다.`;
-  
-  // 강점 및 위험 요소
-  const strengths = trend > 0
-    ? [
-        `Strong technical indicators with RSI at ${stockData.technicalIndicators.rsi}`,
-        `Positive momentum in the ${stockData.sector} sector`,
-        `Recent price action shows support at ${stockData.technicalIndicators.supportLevels[0]}`
-      ]
-    : [
-        `Oversold conditions with RSI at ${stockData.technicalIndicators.rsi}`,
-        `Potential reversal pattern forming`,
-        `Strong support level at ${stockData.technicalIndicators.supportLevels[0]}`
-      ];
-  
-  const risks = trend > 0
-    ? [
-        `Resistance level at ${stockData.technicalIndicators.resistanceLevels[0]}`,
-        `Market volatility may impact short-term performance`,
-        `Economic uncertainty in the ${stockData.sector} sector`
-      ]
-    : [
-        `Downward trend may continue beyond predicted levels`,
-        `Weak technical indicators with MACD at ${stockData.technicalIndicators.macd.value}`,
-        `Sector-wide challenges affecting performance`
-      ];
-  
-  // 추천
-  const recommendation = trend > 0
-    ? `Consider a buy position with a target price of ${mediumTermPrice} and a stop loss at ${shortTermRangeMin}.`
-    : `Consider a sell position with a target price of ${mediumTermPrice} and a stop loss at ${shortTermRangeMax}.`;
-  
-  const recommendationKr = trend > 0
-    ? `목표가 ${mediumTermPrice}와 손절가 ${shortTermRangeMin}으로 매수 포지션을 고려하세요.`
-    : `목표가 ${mediumTermPrice}와 손절가 ${shortTermRangeMax}으로 매도 포지션을 고려하세요.`;
-  
-  // 분석 세부 정보
-  const analysisDetails = `Detailed analysis based on historical price patterns, technical indicators, and market conditions. The prediction model considers multiple factors including volume trends, moving averages, and relative strength.`;
-  
-  const analysisDetailsKr = `과거 가격 패턴, 기술적 지표 및 시장 상황을 기반으로 한 상세 분석입니다. 예측 모델은 거래량 추세, 이동 평균선 및 상대 강도를 포함한 여러 요소를 고려합니다.`;
   
   return {
     shortTerm: {
-      price: shortTermPrice,
-      change: parseFloat(((shortTermPrice - currentPrice) / currentPrice * 100).toFixed(2)),
-      probability: shortTermProbability,
+      price: shortTermPrediction,
+      change: parseFloat((shortTermChange * 100).toFixed(2)),
+      probability: parseFloat(((50 + shortTermChange * 100) / 100).toFixed(2)),
       range: {
-        min: shortTermRangeMin,
-        max: shortTermRangeMax
+        min: parseFloat((shortTermPrediction * 0.9).toFixed(2)),
+        max: parseFloat((shortTermPrediction * 1.1).toFixed(2))
       }
     },
     mediumTerm: {
-      price: mediumTermPrice,
-      change: parseFloat(((mediumTermPrice - currentPrice) / currentPrice * 100).toFixed(2)),
-      probability: mediumTermProbability,
+      price: mediumTermPrediction,
+      change: parseFloat((mediumTermChange * 100).toFixed(2)),
+      probability: parseFloat(((50 + mediumTermChange * 100) / 100).toFixed(2)),
       range: {
-        min: mediumTermRangeMin,
-        max: mediumTermRangeMax
+        min: parseFloat((mediumTermPrediction * 0.85).toFixed(2)),
+        max: parseFloat((mediumTermPrediction * 1.15).toFixed(2))
       }
     },
     longTerm: {
-      price: longTermPrice,
-      change: parseFloat(((longTermPrice - currentPrice) / currentPrice * 100).toFixed(2)),
-      probability: longTermProbability,
+      price: longTermPrediction,
+      change: parseFloat((longTermChange * 100).toFixed(2)),
+      probability: parseFloat(((50 + longTermChange * 100) / 100).toFixed(2)),
       range: {
-        min: longTermRangeMin,
-        max: longTermRangeMax
+        min: parseFloat((longTermPrediction * 0.8).toFixed(2)),
+        max: parseFloat((longTermPrediction * 1.2).toFixed(2))
       }
     },
     pricePredictions,
-    confidenceScore,
+    confidenceScore: parseFloat(confidenceScore.toFixed(1)),
     modelInfo,
     summary,
-    summaryKr,
+    summaryKr: summary,
     strengths,
     risks,
     recommendation,
-    recommendationKr,
-    analysisDetails,
-    analysisDetailsKr
+    recommendationKr: recommendation,
+    analysisDetails: recommendationReason,
+    analysisDetailsKr: recommendationReason
   };
 };
+
+// 모멘텀 계산 함수
+function calculateMomentum(prices, days) {
+  if (prices.length < days) return 0;
+  
+  const currentPrice = prices[prices.length - 1].price;
+  const pastPrice = prices[prices.length - days].price;
+  
+  return ((currentPrice - pastPrice) / pastPrice) * 100;
+}
+
+// 기술적 지표 계산 함수
+function calculateTechnicalIndicators(prices) {
+  // 가격 데이터 추출
+  const closePrices = prices.map(p => p.price);
+  
+  // RSI 계산
+  const rsi = 50; // 간소화된 계산
+  
+  // 이동평균선 계산
+  const ma50 = calculateSimpleMA(closePrices, 50);
+  const ma200 = calculateSimpleMA(closePrices, 200);
+  const ema20 = calculateSimpleEMA(closePrices, 20);
+  const ema50 = calculateSimpleEMA(closePrices, 50);
+  
+  // 볼린저 밴드 계산
+  const { upper, middle, lower, width } = calculateSimpleBollingerBands(closePrices);
+  
+  // MACD 계산
+  const { value, signal, histogram } = calculateSimpleMACD(closePrices);
+  
+  // ATR 계산
+  const atr = 2; // 간소화된 계산
+  
+  // OBV 계산
+  const obv = 1000000; // 간소화된 계산
+  
+  // 스토캐스틱 계산
+  const stochastic = { k: 50, d: 50 }; // 간소화된 계산
+  
+  // ADX 계산
+  const adx = 25; // 간소화된 계산
+  
+  // 지지/저항 레벨 계산
+  const currentPrice = closePrices[closePrices.length - 1];
+  const supportLevels = [currentPrice * 0.95, currentPrice * 0.9];
+  const resistanceLevels = [currentPrice * 1.05, currentPrice * 1.1];
+  
+  return {
+    rsi,
+    macd: { value, signal, histogram },
+    bollingerBands: { upper, middle, lower, width },
+    ma50,
+    ma200,
+    ema20,
+    ema50,
+    atr,
+    obv,
+    stochastic,
+    adx,
+    supportLevels,
+    resistanceLevels
+  };
+}
+
+// 간단한 이동평균 계산
+function calculateSimpleMA(prices, period) {
+  if (prices.length < period) return prices[prices.length - 1] || 0;
+  
+  const slice = prices.slice(prices.length - period);
+  return slice.reduce((sum, price) => sum + price, 0) / period;
+}
+
+// 간단한 지수이동평균 계산
+function calculateSimpleEMA(prices, period) {
+  if (prices.length < period) return prices[prices.length - 1] || 0;
+  
+  const k = 2 / (period + 1);
+  let ema = prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
+  
+  for (let i = period; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+  }
+  
+  return ema;
+}
+
+// 간단한 볼린저 밴드 계산
+function calculateSimpleBollingerBands(prices, period = 20, multiplier = 2) {
+  if (prices.length < period) {
+    return { upper: 0, middle: 0, lower: 0, width: 0 };
+  }
+  
+  const slice = prices.slice(prices.length - period);
+  const middle = slice.reduce((sum, price) => sum + price, 0) / period;
+  
+  const squaredDiffs = slice.map(price => Math.pow(price - middle, 2));
+  const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / period;
+  const stdDev = Math.sqrt(variance);
+  
+  const upper = middle + (multiplier * stdDev);
+  const lower = middle - (multiplier * stdDev);
+  const width = ((upper - lower) / middle) * 100;
+  
+  return { upper, middle, lower, width };
+}
+
+// 간단한 MACD 계산
+function calculateSimpleMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+  const fastEMA = calculateSimpleEMA(prices, fastPeriod);
+  const slowEMA = calculateSimpleEMA(prices, slowPeriod);
+  const value = fastEMA - slowEMA;
+  
+  // 신호선 계산을 위한 MACD 값 배열 생성 (간소화)
+  const macdLine = [value];
+  const signal = calculateSimpleEMA(macdLine, signalPeriod);
+  const histogram = value - signal;
+  
+  return { value, signal, histogram };
+}

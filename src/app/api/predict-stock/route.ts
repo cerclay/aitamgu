@@ -3,17 +3,25 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { StockData, PredictionResult } from '@/app/stock-analyzer/types';
 
 // Gemini API 키 (실제 사용 시 환경 변수로 관리해야 합니다)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { stockData, modelType = 'transformer', predictionPeriod = 'all' } = body;
+    const { symbol, stockData, economicIndicators = [], modelType = 'transformer', predictionPeriod = 'all' } = body;
     
     if (!stockData) {
       return NextResponse.json(
         { error: '주식 데이터가 필요합니다' },
+        { status: 400 }
+      );
+    }
+    
+    // 심볼 확인
+    const tickerSymbol = symbol || stockData.ticker;
+    if (!tickerSymbol) {
+      return NextResponse.json(
+        { error: '주식 심볼이 필요합니다' },
         { status: 400 }
       );
     }
@@ -27,59 +35,94 @@ export async function POST(request: Request) {
       prompt = generateTransformerPredictionPrompt(stockData, predictionPeriod);
     }
     
-    // Gemini API 호출
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // 응답 텍스트에서 JSON 형식의 예측 결과 추출 시도
-    try {
-      // JSON 형식의 데이터를 찾기 위한 정규식
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
-                        text.match(/```\n([\s\S]*?)\n```/) || 
-                        text.match(/{[\s\S]*?}/);
-      
-      let predictionResult: PredictionResult;
-      
-      if (jsonMatch) {
-        // JSON 문자열 추출 및 파싱
-        const jsonStr = jsonMatch[1] || jsonMatch[0];
-        predictionResult = JSON.parse(jsonStr);
-      } else {
-        // JSON 형식이 없는 경우 모의 데이터 생성
-        predictionResult = generateMockPrediction(stockData, modelType);
-      }
-      
-      // 분석 텍스트 추출 (JSON 부분 제외)
-      const analysisText = text.replace(/```json\n[\s\S]*?\n```/, '')
-                              .replace(/```\n[\s\S]*?\n```/, '')
-                              .trim();
-      
-      // 최종 응답 생성
-      return NextResponse.json({
-        prediction: predictionResult,
-        analysis: analysisText,
-        modelType,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('예측 결과 파싱 오류:', error);
-      
-      // 파싱 오류 시 모의 데이터 사용
+    // API 키가 유효한지 확인
+    if (!GEMINI_API_KEY) {
+      console.log('Gemini API 키가 설정되지 않았습니다. 모의 데이터를 반환합니다.');
       const mockPrediction = generateMockPrediction(stockData, modelType);
       
       return NextResponse.json({
         prediction: mockPrediction,
-        analysis: text,
+        analysis: '모의 AI 분석 데이터입니다. 실제 API 키를 설정하면 더 정확한 분석을 받을 수 있습니다.',
+        modelType,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Gemini API 호출
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // 응답 텍스트에서 JSON 형식의 예측 결과 추출 시도
+      try {
+        // JSON 형식의 데이터를 찾기 위한 정규식
+        const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
+                          text.match(/```\n([\s\S]*?)\n```/) || 
+                          text.match(/{[\s\S]*?}/);
+        
+        let predictionResult: PredictionResult;
+        
+        if (jsonMatch) {
+          // JSON 문자열 추출 및 파싱
+          const jsonStr = jsonMatch[1] || jsonMatch[0];
+          try {
+            predictionResult = JSON.parse(jsonStr);
+          } catch (jsonError) {
+            console.error('JSON 파싱 오류:', jsonError);
+            console.error('파싱 시도한 문자열:', jsonStr);
+            predictionResult = generateMockPrediction(stockData, modelType);
+          }
+        } else {
+          // JSON 형식이 없는 경우 모의 데이터 생성
+          console.log('JSON 형식의 응답을 찾을 수 없습니다. 모의 데이터를 생성합니다.');
+          predictionResult = generateMockPrediction(stockData, modelType);
+        }
+        
+        // 분석 텍스트 추출 (JSON 부분 제외)
+        const analysisText = text.replace(/```json\n[\s\S]*?\n```/, '')
+                                .replace(/```\n[\s\S]*?\n```/, '')
+                                .trim();
+        
+        // 최종 응답 생성
+        return NextResponse.json({
+          prediction: predictionResult,
+          analysis: analysisText,
+          modelType,
+          timestamp: new Date().toISOString()
+        });
+      } catch (parseError) {
+        console.error('예측 결과 파싱 오류:', parseError);
+        
+        // 파싱 오류 시 모의 데이터 사용
+        const mockPrediction = generateMockPrediction(stockData, modelType);
+        
+        return NextResponse.json({
+          prediction: mockPrediction,
+          analysis: text,
+          modelType,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (apiCallError) {
+      console.error('Gemini API 호출 오류:', apiCallError);
+      
+      // API 호출 실패 시 모의 데이터 생성
+      const mockPrediction = generateMockPrediction(stockData, modelType);
+      
+      return NextResponse.json({
+        prediction: mockPrediction,
+        analysis: 'Gemini API 호출 중 오류가 발생했습니다. 모의 데이터를 제공합니다.',
         modelType,
         timestamp: new Date().toISOString()
       });
     }
   } catch (error) {
-    console.error('Gemini API 오류:', error);
+    console.error('요청 처리 오류:', error);
     
-    // API 호출 실패 시 모의 데이터 생성
+    // 기본 주식 데이터 생성 (요청 데이터가 없는 경우)
     const defaultStockData = {
       ticker: 'ERROR',
       companyName: 'Error Company',
@@ -153,6 +196,15 @@ export async function POST(request: Request) {
           targetPrice: 110
         }
       },
+      news: [
+        {
+          title: '오류 발생',
+          source: '시스템',
+          date: new Date().toISOString().split('T')[0],
+          url: '#',
+          sentiment: 'neutral' as const
+        }
+      ],
       patterns: [],
       upcomingEvents: [],
       momentum: {

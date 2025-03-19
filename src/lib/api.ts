@@ -34,8 +34,8 @@ function convertToGrid(lat: number, lon: number) {
   if (theta < -Math.PI) theta += 2.0 * Math.PI;
   theta *= sn;
 
-  let x = Math.floor(ra * Math.sin(theta) + XO + 0.5);
-  let y = Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+  const x = Math.floor(ra * Math.sin(theta) + XO + 0.5);
+  const y = Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
 
   return { x, y };
 }

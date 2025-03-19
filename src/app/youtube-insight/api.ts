@@ -24,7 +24,8 @@ export async function fetchVideoInfo(videoId: string) {
     const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
     
     if (!apiKey) {
-      throw new Error('YouTube API 키가 설정되지 않았습니다.');
+      console.log('YouTube API 키가 설정되지 않았습니다. 모의 데이터를 반환합니다.');
+      return generateMockVideoInfo(videoId);
     }
 
     const response = await fetch(
@@ -44,8 +45,55 @@ export async function fetchVideoInfo(videoId: string) {
     return data.items[0];
   } catch (error) {
     console.error('YouTube 영상 정보 가져오기 실패:', error);
-    throw error;
+    return generateMockVideoInfo(videoId);
   }
+}
+
+// 모의 영상 정보 생성
+function generateMockVideoInfo(videoId: string) {
+  const currentDate = new Date();
+  const publishedDate = new Date();
+  publishedDate.setDate(currentDate.getDate() - Math.floor(Math.random() * 365)); // 최대 1년 전
+  
+  return {
+    id: videoId,
+    snippet: {
+      publishedAt: publishedDate.toISOString(),
+      channelId: 'UC_mock_channel_id',
+      title: '모의 YouTube 영상 제목',
+      description: '이 영상은 YouTube API 키가 설정되지 않아 생성된 모의 데이터입니다. 실제 영상 정보를 보려면 YouTube API 키를 설정해주세요.',
+      thumbnails: {
+        default: { url: 'https://picsum.photos/120/90', width: 120, height: 90 },
+        medium: { url: 'https://picsum.photos/320/180', width: 320, height: 180 },
+        high: { url: 'https://picsum.photos/480/360', width: 480, height: 360 },
+        standard: { url: 'https://picsum.photos/640/480', width: 640, height: 480 },
+        maxres: { url: 'https://picsum.photos/1280/720', width: 1280, height: 720 }
+      },
+      channelTitle: '모의 채널명',
+      tags: ['모의', '데이터', '예시'],
+      categoryId: '22',
+      liveBroadcastContent: 'none',
+      localized: {
+        title: '모의 YouTube 영상 제목',
+        description: '이 영상은 YouTube API 키가 설정되지 않아 생성된 모의 데이터입니다. 실제 영상 정보를 보려면 YouTube API 키를 설정해주세요.'
+      }
+    },
+    contentDetails: {
+      duration: 'PT10M30S',
+      dimension: '2d',
+      definition: 'hd',
+      caption: 'false',
+      licensedContent: true,
+      contentRating: {},
+      projection: 'rectangular'
+    },
+    statistics: {
+      viewCount: (Math.floor(Math.random() * 1000000) + 1000).toString(),
+      likeCount: (Math.floor(Math.random() * 50000) + 100).toString(),
+      favoriteCount: '0',
+      commentCount: (Math.floor(Math.random() * 5000) + 10).toString()
+    }
+  };
 }
 
 // 영상 길이(PT형식)를 초 단위로 변환

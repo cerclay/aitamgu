@@ -12,6 +12,8 @@ const getApiKey = () => {
     console.error('Gemini API 키가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 설정하세요.');
     return '';
   }
+  
+  console.log('Gemini API 키 확인:', apiKey ? '설정됨' : '설정되지 않음');
   return apiKey;
 };
 
@@ -29,10 +31,21 @@ export async function POST(request: NextRequest) {
     // API 키 확인
     const API_KEY = getApiKey();
     if (!API_KEY) {
-      return NextResponse.json(
-        { error: 'Gemini API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.' },
-        { status: 500 }
-      );
+      console.error('API 키가 없습니다. 모의 데이터를 반환합니다.');
+      
+      // API 키가 없을 경우 모의 데이터 반환
+      return NextResponse.json({
+        analysis: {
+          overall: "손금 분석을 위해 API 키가 필요합니다. 현재 모의 데이터를 제공합니다.",
+          personality: "당신은 창의적이고 분석적인 성격을 가지고 있습니다. 문제 해결 능력이 뛰어나며 새로운 아이디어를 생각해내는 것을 좋아합니다.",
+          loveLife: "현재 또는 미래의 파트너와 깊은 유대감을 형성할 수 있는 잠재력이 있습니다. 진실된 소통이 관계의 핵심이 될 것입니다.",
+          career: "다양한 분야에서 성공할 수 있는 잠재력이 있으며, 특히 창의성과 분석력이 필요한 직업에서 두각을 나타낼 수 있습니다.",
+          health: "전반적으로 건강한 상태를 유지할 수 있으나, 스트레스 관리에 주의를 기울일 필요가 있습니다.",
+          fortune: "재정적 안정을 이룰 수 있는 잠재력이 있으며, 신중한 계획과 투자로 재물을 모을 수 있습니다.",
+          talent: "분석적 사고와 창의적 문제 해결 능력이 뛰어납니다. 이러한 재능을 활용하여 다양한 분야에서 성공할 수 있습니다.",
+          future: "앞으로의 삶에서 많은 기회와 도전을 만날 것입니다. 긍정적인 마인드와 적응력으로 성공적인 미래를 만들어갈 수 있습니다."
+        }
+      });
     }
     
     // Gemini 모델 초기화

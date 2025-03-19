@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
+// Gemini API 키 설정
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyC_Woxwt323fN5CRAHbGRrzAp10bGZMA_4';
+
 interface SummaryResult {
   title: string;
   channelName: string;
@@ -60,8 +63,43 @@ export default function YouTubeInsight() {
       // YouTube API를 통해 영상 정보 가져오기
       const videoInfo = await fetchVideoInfo(videoId);
       
-      // Gemini API를 사용하여 영상 요약
-      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+      // API 키가 없거나 기본값인 경우 모의 데이터 생성
+      if (!GEMINI_API_KEY || GEMINI_API_KEY.includes('YOUR_') || GEMINI_API_KEY.trim() === '') {
+        console.error('Gemini API 키가 올바르게 설정되지 않았습니다.');
+        
+        // 모의 데이터 생성 및 반환
+        const mockResult: SummaryResult = {
+          title: videoInfo.snippet.title,
+          channelName: videoInfo.snippet.channelTitle,
+          uploadDate: formatPublishedDate(videoInfo.snippet.publishedAt),
+          viewCount: formatViewCount(videoInfo.statistics.viewCount) + '회',
+          summary: `이 영상은 "${videoInfo.snippet.title}"에 관한 내용을 다루고 있습니다. 현재 Gemini API 키가 설정되지 않아 상세 요약을 제공할 수 없습니다. 실제 요약을 보려면 Gemini API 키를 설정해주세요.`,
+          keyPoints: [
+            "Gemini API 키가 설정되지 않아 상세 요약을 제공할 수 없습니다.",
+            "실제 요약을 보려면 Gemini API 키를 설정해주세요.",
+            "영상 제목: " + videoInfo.snippet.title,
+            "채널명: " + videoInfo.snippet.channelTitle,
+            "업로드 날짜: " + formatPublishedDate(videoInfo.snippet.publishedAt),
+            "조회수: " + formatViewCount(videoInfo.statistics.viewCount) + '회'
+          ],
+          timestamps: [
+            { time: "00:00", content: "영상 시작" },
+            { time: "00:30", content: "주요 내용 소개" },
+            { time: "01:00", content: "세부 내용 설명" }
+          ]
+        };
+        
+        setResult(mockResult);
+        setLoading(false);
+        toast({
+          title: '모의 요약 생성',
+          description: 'Gemini API 키가 설정되지 않아 모의 요약 데이터를 생성했습니다.',
+        });
+        return;
+      }
+
+      console.log('API 키 상태: 유효함');
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
       const summaryLengthText = 

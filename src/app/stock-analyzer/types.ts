@@ -82,6 +82,13 @@ export interface StockData {
       targetPrice: number;
     };
   };
+  news: {
+    title: string;
+    source: string;
+    date: string;
+    url: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+  }[];
   patterns: {
     name: string;
     description: string;
@@ -108,15 +115,23 @@ export interface StockData {
 
 // 경제 지표 타입
 export interface EconomicIndicator {
+  id: string;
   name: string;
   nameKr: string;
+  category: string;
   value: number;
   unit: string;
-  change: number;
-  previousPeriod: string;
-  source: string;
-  description: string;
+  date: string;
+  monthlyChange: number;
+  yearlyChange: number;
+  trend: 'up' | 'down' | 'stable';
   impact: 'positive' | 'negative' | 'neutral';
+  description: string;
+  descriptionKr: string;
+  historicalData: {
+    date: string;
+    value: number;
+  }[];
 }
 
 // 예측 결과 타입

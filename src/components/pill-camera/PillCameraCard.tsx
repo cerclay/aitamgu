@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Camera, FileUp, Upload, ImageIcon, RefreshCw, X, ZoomIn, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AlertCircle, Camera, Upload, Image as ImageIcon, RefreshCw, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PillCameraCardProps {
-  onPillAnalysis: (imageFile: File) => Promise<void>;
+  onPillAnalysis: (file: File) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -19,82 +18,53 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
   const [activeTab, setActiveTab] = useState('upload');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [hasFlash, setHasFlash] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
+  
+  // 파일 입력 필드 초기화
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setPreviewUrl(null);
+    setError(null);
+  };
+  
+  // 파일 선택 시 미리보기 생성
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    processFile(file);
-  };
-
-  const processFile = (file: File) => {
-    // 이미지 파일 유효성 검사
-    if (!file.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드 가능합니다.');
-      return;
-    }
-
-    // 파일 크기 제한 (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('파일 크기는 10MB 이하여야 합니다.');
-      return;
-    }
-
-    // 이미지 품질 확인을 위한 추가 검사
-    // 브라우저 환경에서만 실행
-    if (typeof window !== 'undefined') {
-      const imgElement = new window.Image();
-      const objectUrl = URL.createObjectURL(file);
+    setError(null);
+    
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('이미지 파일만 업로드할 수 있습니다.');
+        resetFileInput();
+        return;
+      }
       
-      imgElement.onload = () => {
-        // 이미지 크기가 너무 작은 경우
-        if (imgElement.width < 200 || imgElement.height < 200) {
-          setError('이미지 해상도가 너무 낮습니다. 더 선명한 이미지를 사용해주세요.');
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-        
-        setError(null);
-        setPreviewUrl(objectUrl);
+      // 파일 크기 제한 (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('파일 크기는 10MB 이하여야 합니다.');
+        resetFileInput();
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result as string);
       };
-      
-      imgElement.onerror = () => {
-        setError('이미지를 로드할 수 없습니다. 다른 이미지를 시도해주세요.');
-        URL.revokeObjectURL(objectUrl);
-      };
-      
-      imgElement.src = objectUrl;
+      reader.readAsDataURL(file);
     } else {
-      // 서버 사이드 렌더링 환경에서는 간단히 처리
-      setError(null);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+      setPreviewUrl(null);
     }
   };
 
@@ -116,28 +86,54 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
     }
   };
 
+  const getAvailableDeviceCapabilities = async (stream: MediaStream) => {
+    const videoTrack = stream.getVideoTracks()[0];
+    
+    // Flash 지원 여부 확인
+    try {
+      const capabilities = videoTrack.getCapabilities();
+      setHasFlash(capabilities?.torch === true);
+    } catch (e) {
+      console.log('카메라 기능 확인 중 오류:', e);
+      setHasFlash(false);
+    }
+  };
+
   const startCamera = useCallback(async () => {
     try {
       if (videoRef.current) {
         setCameraError(null);
-        const stream = await navigator.mediaDevices.getUserMedia({
+        
+        // 이전 스트림이 있다면 중지
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints: MediaStreamConstraints = {
           video: { 
-            facingMode: 'environment',
+            facingMode: facingMode,
             width: { ideal: 1280 },
-            height: { ideal: 720 }
+            height: { ideal: 720 },
+            // @ts-ignore - 일부 브라우저에서만 작동하는 고급 기능
+            zoom: zoomLevel
           }
-        });
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsStreaming(true);
+        
+        // 사용 가능한 카메라 기능 확인
+        await getAvailableDeviceCapabilities(stream);
       }
     } catch (err) {
       console.error('카메라 접근 실패:', err);
       setCameraError('카메라에 접근할 수 없습니다. 카메라 권한을 확인해주세요.');
       setIsStreaming(false);
     }
-  }, []);
+  }, [facingMode, zoomLevel]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -147,15 +143,53 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
+      setFlashOn(false);
     }
   }, []);
 
+  const toggleFlash = useCallback(async () => {
+    if (!streamRef.current) return;
+    
+    try {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      
+      // Flash 제어 (일부 기기만 지원)
+      const newFlashState = !flashOn;
+      
+      // @ts-ignore - applyConstraints는 표준이지만 일부 브라우저에서만 지원
+      if (videoTrack.applyConstraints) {
+        await videoTrack.applyConstraints({
+          advanced: [{ torch: newFlashState }]
+        });
+        setFlashOn(newFlashState);
+      }
+    } catch (e) {
+      console.error('플래시 제어 오류:', e);
+    }
+  }, [flashOn]);
+
   const switchCamera = useCallback(async () => {
-    stopCamera();
-    setTimeout(() => {
-      startCamera();
-    }, 300);
-  }, [startCamera, stopCamera]);
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  }, []);
+
+  const handleZoom = useCallback((zoom: number) => {
+    setZoomLevel(zoom);
+    
+    // 현재 스트림이 있는 경우 즉시 zoom 적용 시도
+    if (streamRef.current) {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      try {
+        // @ts-ignore - 일부 기기에서만 지원
+        if (videoTrack.applyConstraints) {
+          videoTrack.applyConstraints({
+            advanced: [{ zoom }]
+          }).catch(e => console.log('줌 적용 실패:', e));
+        }
+      } catch (e) {
+        console.log('줌 기능 지원하지 않음:', e);
+      }
+    }
+  }, []);
 
   const captureImage = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !isStreaming) return;
@@ -206,6 +240,26 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
     }
   };
 
+  // 줌 수준 변경 효과 적용
+  useEffect(() => {
+    if (isStreaming) {
+      const updateZoom = async () => {
+        await startCamera();
+      };
+      updateZoom();
+    }
+  }, [zoomLevel, isStreaming, startCamera]);
+
+  // facingMode 변경 시 카메라 재시작
+  useEffect(() => {
+    if (activeTab === 'camera') {
+      stopCamera();
+      setTimeout(() => {
+        startCamera();
+      }, 300);
+    }
+  }, [facingMode, activeTab, stopCamera, startCamera]);
+
   // 컴포넌트 언마운트 시 카메라 중지
   useEffect(() => {
     return () => {
@@ -214,62 +268,51 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
   }, [stopCamera]);
 
   return (
-    <Card className="w-full overflow-hidden border-2 border-blue-100 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-        <CardTitle className="flex items-center text-blue-700">
-          <Camera className="mr-2 h-5 w-5" />
-          알약 이미지 분석
+    <Card className="w-full overflow-hidden border border-blue-100 shadow-md">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4">
+        <CardTitle className="flex items-center text-blue-700 text-lg">
+          <Camera className="mr-2 h-4 w-4" />
+          알약 촬영
         </CardTitle>
-        <CardDescription>
-          알약 이미지를 업로드하거나 카메라로 촬영하여 분석해보세요.
+        <CardDescription className="text-xs">
+          알약을 업로드하거나 촬영하세요
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2 rounded-none">
-            <TabsTrigger value="upload" className="data-[state=active]:bg-blue-50 py-3">
-              <Upload className="mr-2 h-4 w-4" />
+            <TabsTrigger value="upload" className="data-[state=active]:bg-blue-50 py-2 text-sm">
+              <Upload className="mr-1 h-3 w-3" />
               이미지 업로드
             </TabsTrigger>
-            <TabsTrigger value="camera" className="data-[state=active]:bg-blue-50 py-3">
-              <Camera className="mr-2 h-4 w-4" />
+            <TabsTrigger value="camera" className="data-[state=active]:bg-blue-50 py-2 text-sm">
+              <Camera className="mr-1 h-3 w-3" />
               카메라 촬영
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="upload" className="p-6 space-y-4">
-            <div 
-              className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <div className="flex flex-col items-center justify-center text-center">
-                <ImageIcon className="h-12 w-12 text-blue-500 mb-4" />
-                <h3 className="text-lg font-medium mb-2">이미지 업로드</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  이미지를 드래그하여 놓거나 파일을 선택하세요
-                </p>
-                <Input
-                  id="pill-image"
+          <TabsContent value="upload" className="space-y-4 p-4">
+            <div className="flex items-center justify-center w-full">
+              <label
+                htmlFor="pill-image-upload"
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all"
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <FileUp className="w-6 h-6 text-gray-500 mb-2" />
+                  <p className="text-xs text-gray-500">
+                    <span className="font-semibold">클릭해서 이미지 업로드</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG</p>
+                </div>
+                <input
+                  id="pill-image-upload"
                   type="file"
+                  className="hidden"
                   accept="image/*"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  disabled={isLoading}
-                  className="hidden"
                 />
-                <Button 
-                  onClick={() => fileInputRef.current?.click()} 
-                  variant="outline"
-                  disabled={isLoading}
-                >
-                  파일 선택
-                </Button>
-              </div>
+              </label>
             </div>
             
             <AnimatePresence>
@@ -293,13 +336,23 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  className="mt-4"
+                  className="mt-2"
                 >
-                  <p className="text-sm text-gray-500 mb-2 flex items-center">
-                    <ImageIcon className="h-4 w-4 mr-1" />
-                    미리보기
-                  </p>
-                  <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-md border shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <ImageIcon className="h-3 w-3 mr-1" />
+                      미리보기
+                    </p>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-5 w-5" 
+                      onClick={resetFileInput}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="relative aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-md border shadow-sm">
                     <img
                       src={previewUrl}
                       alt="알약 미리보기"
@@ -311,7 +364,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
             </AnimatePresence>
           </TabsContent>
           
-          <TabsContent value="camera" className="space-y-4 p-6">
+          <TabsContent value="camera" className="space-y-3 p-4">
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black shadow-sm">
               <video
                 ref={videoRef}
@@ -322,7 +375,17 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
               <canvas ref={canvasRef} className="hidden" />
               
               {isStreaming && (
-                <div className="absolute bottom-4 right-4">
+                <div className="absolute bottom-3 right-3 flex gap-2">
+                  {hasFlash && (
+                    <Button 
+                      size="icon" 
+                      variant="secondary" 
+                      onClick={toggleFlash}
+                      className={`rounded-full backdrop-blur-sm ${flashOn ? 'bg-yellow-400 text-black' : 'bg-white/80 hover:bg-white'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border ${flashOn ? 'bg-yellow-400 border-yellow-600' : 'bg-white border-gray-400'}`} />
+                    </Button>
+                  )}
                   <Button 
                     size="icon" 
                     variant="secondary" 
@@ -334,11 +397,27 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
                 </div>
               )}
               
+              {isStreaming && (
+                <div className="absolute top-3 left-3 right-3 flex items-center">
+                  <ZoomIn className="h-3 w-3 text-white mr-2" />
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="5" 
+                    step="0.5" 
+                    value={zoomLevel} 
+                    onChange={(e) => handleZoom(parseFloat(e.target.value))} 
+                    className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer" 
+                  />
+                  <span className="text-white text-xs ml-2">{zoomLevel}x</span>
+                </div>
+              )}
+              
               {!isStreaming && !cameraError && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="text-center text-white">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p>카메라 연결 중...</p>
+                    <p className="text-sm">카메라 연결 중...</p>
                   </div>
                 </div>
               )}
@@ -365,13 +444,13 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  className="mt-4"
+                  className="mt-2"
                 >
-                  <p className="text-sm text-gray-500 mb-2 flex items-center">
-                    <ImageIcon className="h-4 w-4 mr-1" />
+                  <p className="text-xs text-gray-500 mb-1 flex items-center">
+                    <ImageIcon className="h-3 w-3 mr-1" />
                     촬영된 이미지
                   </p>
-                  <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-md border shadow-sm">
+                  <div className="relative aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-md border shadow-sm">
                     <img
                       src={previewUrl}
                       alt="알약 미리보기"
@@ -385,12 +464,12 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
         </Tabs>
       </CardContent>
       
-      <CardFooter className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <CardFooter className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
         {activeTab === 'upload' ? (
           <Button 
             onClick={handleUpload} 
             disabled={!previewUrl || isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-blue-600 hover:bg-blue-700 h-10"
           >
             {isLoading ? (
               <>
@@ -407,7 +486,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
           <Button 
             onClick={captureImage} 
             disabled={!isStreaming || isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-blue-600 hover:bg-blue-700 h-10"
           >
             {isLoading ? (
               <>
