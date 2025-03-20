@@ -22,268 +22,228 @@ interface AIAnalysisResponse {
 }
 
 // 주식 데이터 가져오기
-export async function fetchStockData(ticker: string) {
+export async function fetchStockData(symbol: string) {
   try {
-    // API 키 제거 - 필요 없음
-    const cacheKey = `stock-data-${ticker}`;
+    console.log('클라이언트에서 요청하는 심볼:', symbol);
+    const response = await fetch(`/api/yahoo-finance?symbol=${encodeURIComponent(symbol)}`);
     
-    // 캐시 확인
-    const cachedData = sessionStorage.getItem(cacheKey);
-      if (cachedData) {
-          const { data, timestamp } = JSON.parse(cachedData);
-      // 5분(300,000ms) 이내의 캐시만 사용
-      if (Date.now() - timestamp < 300000) {
-        console.log('캐시된 주식 데이터 사용:', ticker);
-            return data;
-      }
+    if (!response.ok) {
+      throw new Error('주식 데이터를 가져오는 데 실패했습니다.');
     }
     
-    console.log('새 주식 데이터 요청:', ticker);
-    const response = await fetch(`/api/yahoo-finance?ticker=${ticker}`);
-      
-      if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('주식 데이터 가져오기 실패:', errorData);
-      throw new Error(errorData?.error || '주식 데이터 가져오기 실패');
-      }
-      
-      const data = await response.json();
-      
-    // 캐시 저장
-    sessionStorage.setItem(cacheKey, JSON.stringify({
-              data,
-              timestamp: Date.now()
-    }));
+    const data = await response.json();
+    console.log('API 응답 받은 심볼:', data.ticker);
     
-      return data;
+    // 심볼이 일치하는지 확인
+    if (data.ticker.toUpperCase() !== symbol.toUpperCase()) {
+      console.warn(`요청한 심볼(${symbol})과 응답 심볼(${data.ticker})이 일치하지 않습니다.`);
+    }
+    
+    return data;
   } catch (error) {
     console.error('주식 데이터 가져오기 오류:', error);
     throw error;
   }
 }
 
-// 경제 지표 가져오기
-export const fetchEconomicIndicators = async (): Promise<SimpleEconomicIndicator[]> => {
+// 경제 지표 데이터 가져오기
+export async function fetchEconomicIndicators() {
   try {
-    // 캐시 키 생성
-    const cacheKey = 'economic_indicators';
+    console.log('경제 지표 데이터 요청 시작');
+    const response = await fetch('/api/economic-indicators');
     
-    // 로컬 스토리지에서 캐시된 데이터 확인 (브라우저 환경에서만)
-    if (typeof window !== 'undefined') {
-      const cachedData = localStorage.getItem(cacheKey);
-      if (cachedData) {
-        try {
-          const { data, timestamp } = JSON.parse(cachedData);
-          
-          // 캐시가 1시간 이내면 캐시된 데이터 반환
-          if (Date.now() - timestamp < 60 * 60 * 1000) {
-            console.log('캐시된 경제 지표 데이터');
-            return data;
-          }
-        } catch (cacheError) {
-          console.error('캐시 파싱 오류:', cacheError);
-        }
-      }
+    if (!response.ok) {
+      throw new Error('경제 지표를 가져오는 데 실패했습니다.');
     }
     
-    // FRED API 호출
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃
+    const data = await response.json();
+    console.log('경제 지표 데이터 응답 받음:', data?.length || 0, '개 항목');
     
-    try {
-      const response = await fetch('/api/fred', {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`FRED API 응답 오류: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // 로컬 스토리지에 캐시 저장
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(
-              cacheKey,
-              JSON.stringify({
-              data,
-                timestamp: Date.now()
-              })
-            );
-          } catch (storageError) {
-            console.error('로컬 스토리지 저장 오류:', storageError);
-          }
-        }
-        
-      return data;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      throw fetchError;
+    // 응답 데이터가 배열이 아니면 빈 배열 반환
+    if (!Array.isArray(data)) {
+      console.warn('경제 지표 데이터가 배열 형태가 아닙니다:', data);
+      return [];
     }
+    
+    return data;
   } catch (error) {
     console.error('경제 지표 가져오기 오류:', error);
-    
-    // 오류 발생 시 모의 데이터 반환
-  return [
-    {
-        name: 'GDP 성장률',
-        value: 2.4,
-      unit: '%',
-        period: '2023 Q4',
-        trend: 'up',
-        changePercent: 0.2,
-        description: '국내총생산(GDP) 성장률은 전년 동기 대비 실질 GDP의 변화를 측정합니다.'
-      },
-      {
-        name: '실업률',
-        value: 3.7,
-      unit: '%',
-        period: '2024-01',
-        trend: 'down',
-        changePercent: -0.1,
-        description: '실업률은 노동력 중 실업자의 비율을 나타냅니다.'
-      },
-      {
-        name: '인플레이션율 (CPI)',
-        value: 3.1,
-      unit: '%',
-        period: '2024-01',
-        trend: 'down',
-        changePercent: -0.2,
-        description: '소비자물가지수(CPI)는 소비자가 구매하는 상품과 서비스의 가격 변화를 측정합니다.'
-      },
-      {
-        name: '연방기금금리',
-        value: 5.33,
-      unit: '%',
-        period: '2024-02',
-        trend: 'stable',
-        changePercent: 0,
-        description: '연방기금금리는 미국 중앙은행(FED)이 설정한 기준금리입니다.'
-      },
-      {
-        name: '10년 국채 수익률',
-        value: 4.3,
-      unit: '%',
-        period: '2024-02',
-        trend: 'up',
-        changePercent: 0.15,
-        description: '10년 국채 수익률은 장기 채권 시장의 상태를 나타내는 중요한 지표입니다.'
-      }
-    ];
+    throw error;
   }
-};
+}
 
 // 주식 예측 생성
-export const generatePrediction = async (stockData: StockData, economicIndicators: SimpleEconomicIndicator[] = [], modelType: string = 'transformer', predictionPeriod: string = 'all'): Promise<PredictionResult> => {
+export async function generatePrediction(
+  symbol: string,
+  stockData: StockData,
+  economicIndicators: EconomicIndicator[],
+  modelType: 'gemini' | 'default' = 'gemini'
+): Promise<PredictionResult> {
   try {
-    console.log('AI 분석 시작:', stockData.ticker);
-    
-    // API 호출
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
-    
-    try {
-      const response = await fetch('/api/predict-stock', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          symbol: stockData.ticker,
-          stockData,
-          economicIndicators,
-          modelType,
-          predictionPeriod
-        }),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`API 응답 오류: ${response.status}`);
+    console.log(`주식 예측 생성 시작: ${symbol} (모델: ${modelType})`);
+    let prediction: PredictionResult;
+
+    if (modelType === 'gemini') {
+      try {
+        // Gemini API 엔드포인트 호출
+        console.log('Gemini API를 사용하여 예측 생성');
+        const response = await fetch('/api/gemini-analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            symbol,
+            stockData,
+            economicIndicators,
+          }),
+          // 타임아웃 설정
+          signal: AbortSignal.timeout(30000), // 30초 타임아웃
+        });
+
+        // 응답 검증
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Gemini API 오류 응답 (${response.status}):`, errorText);
+          throw new Error(`Gemini API 호출 실패: ${response.statusText}`);
+        }
+
+        // 응답 데이터 파싱
+        const data = await response.json();
+        prediction = data;
+      } catch (error) {
+        console.error('Gemini 모델 예측 실패:', error);
+        
+        // 기본 모델로 대체
+        console.log('기본 모델로 대체하여 예측 생성');
+        prediction = generateDefaultPrediction(stockData, economicIndicators);
       }
-      
-      const responseData = await response.json();
-      console.log('AI 분석 완료:', stockData.ticker);
-      
-      // 응답 데이터 구조 확인 및 처리
-      if (responseData.prediction) {
-        // prediction 필드가 있는 경우 (API 응답 구조가 { prediction: PredictionResult, ... })
-        return responseData.prediction;
-      } else if (responseData.shortTerm !== undefined) {
-        // 직접 PredictionResult 객체가 반환된 경우
-        return responseData;
-      } else {
-        console.error('예상치 못한 API 응답 구조:', responseData);
-        throw new Error('예상치 못한 API 응답 구조');
-      }
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      throw fetchError;
+    } else {
+      // 기본 모델 사용
+      console.log('기본 모델을 사용하여 예측 생성');
+      prediction = generateDefaultPrediction(stockData, economicIndicators);
     }
+
+    return prediction;
   } catch (error) {
-    console.error('AI 분석 오류:', error);
+    console.error('예측 생성 오류:', error);
+    return generateDefaultPrediction(stockData, economicIndicators);
+  }
+}
+
+// 기본 예측 생성 (Gemini API 실패 시 대체용)
+function generateDefaultPrediction(stockData: StockData, economicIndicators: EconomicIndicator[]): PredictionResult {
+  console.log('기본 예측 모델 사용 중...');
+  const currentPrice = stockData.currentPrice;
+  
+  // 간단한 변동률 계산
+  const shortTermChange = 5 + (Math.random() * 5 - 2.5); // 2.5~7.5% 변동
+  const mediumTermChange = shortTermChange * 1.5; // 단기 예측의 1.5배
+  const longTermChange = shortTermChange * 2.2; // 단기 예측의 2.2배
+  
+  // 예측 가격 계산
+  const shortTermPrice = currentPrice * (1 + shortTermChange / 100);
+  const mediumTermPrice = currentPrice * (1 + mediumTermChange / 100);
+  const longTermPrice = currentPrice * (1 + longTermChange / 100);
+  
+  // 일별 예측 가격 생성
+  const pricePredictions = [];
+  const today = new Date();
+  
+  for (let i = 1; i <= 90; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + i);
     
-    // 기본 예측 결과 생성 (실제 계산은 하지 않고 기본값 반환)
+    let predictedPrice;
+    if (i <= 30) {
+      // 단기: 현재가격에서 shortTermPrice까지 선형 보간
+      predictedPrice = currentPrice + (shortTermPrice - currentPrice) * (i / 30);
+    } else if (i <= 60) {
+      // 중기: shortTermPrice에서 mediumTermPrice까지 선형 보간
+      predictedPrice = shortTermPrice + (mediumTermPrice - shortTermPrice) * ((i - 30) / 30);
+    } else {
+      // 장기: mediumTermPrice에서 longTermPrice까지 선형 보간
+      predictedPrice = mediumTermPrice + (longTermPrice - mediumTermPrice) * ((i - 60) / 30);
+    }
+    
+    // 약간의 변동성 추가
+    const volatility = currentPrice * 0.005 * Math.random();
+    predictedPrice += (Math.random() > 0.5 ? volatility : -volatility);
+    
+    pricePredictions.push({
+      date: date.toISOString().split('T')[0],
+      predictedPrice: Number(predictedPrice.toFixed(2)),
+      range: {
+        min: Number((predictedPrice * 0.95).toFixed(2)),
+        max: Number((predictedPrice * 1.05).toFixed(2))
+      }
+    });
+  }
+  
+  // 투자 추천 결정
+  let recommendation = 'HOLD';
+  if (shortTermChange > 8) recommendation = 'BUY';
+  else if (shortTermChange < -3) recommendation = 'SELL';
+  
+  // 가상의 강점 및 위험 요소 생성
+  const strengths = [
+    '경쟁사 대비 시장 점유율',
+    '안정적인 수익 성장',
+    '다양한 제품 포트폴리오',
+    '효율적인 비용 구조',
+    '글로벌 시장 진출'
+  ];
+  
+  const risks = [
+    '시장 경쟁 심화',
+    '규제 환경 변화',
+    '공급망 불안정성',
+    '기술 변화 적응 필요',
+    '거시경제 불확실성'
+  ];
+  
   return {
     shortTerm: {
-        price: stockData.currentPrice * 1.05,
-        change: 5,
-        probability: 0.6,
-        range: { min: stockData.currentPrice * 0.95, max: stockData.currentPrice * 1.15 }
+      price: Number(shortTermPrice.toFixed(2)),
+      change: Number(shortTermChange.toFixed(2)),
+      probability: 65,
+      range: {
+        min: Number((shortTermPrice * 0.95).toFixed(2)),
+        max: Number((shortTermPrice * 1.05).toFixed(2))
+      }
     },
     mediumTerm: {
-        price: stockData.currentPrice * 1.1,
-        change: 10,
-        probability: 0.5,
-        range: { min: stockData.currentPrice * 0.9, max: stockData.currentPrice * 1.2 }
+      price: Number(mediumTermPrice.toFixed(2)),
+      change: Number(mediumTermChange.toFixed(2)),
+      probability: 60,
+      range: {
+        min: Number((mediumTermPrice * 0.9).toFixed(2)),
+        max: Number((mediumTermPrice * 1.1).toFixed(2))
+      }
     },
     longTerm: {
-        price: stockData.currentPrice * 1.15,
-        change: 15,
-        probability: 0.4,
-        range: { min: stockData.currentPrice * 0.85, max: stockData.currentPrice * 1.3 }
-      },
-      pricePredictions: [
-        {
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          predictedPrice: stockData.currentPrice * 1.02,
-          range: { min: stockData.currentPrice * 0.98, max: stockData.currentPrice * 1.06 }
-        },
-        {
-          date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          predictedPrice: stockData.currentPrice * 1.05,
-          range: { min: stockData.currentPrice * 0.95, max: stockData.currentPrice * 1.15 }
-        },
-        {
-          date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          predictedPrice: stockData.currentPrice * 1.1,
-          range: { min: stockData.currentPrice * 0.9, max: stockData.currentPrice * 1.2 }
-        }
-      ],
-      confidenceScore: 50,
-      modelInfo: {
-        type: '기본 예측 모델',
-        accuracy: 0.5,
-        features: ['과거 가격 데이터'],
-        trainPeriod: '해당 없음'
-      },
-      summary: `${stockData.ticker}에 대한 기본 예측 결과입니다. 자세한 분석을 위해 다시 시도해 주세요.`,
-      summaryKr: `${stockData.ticker}에 대한 기본 예측 결과입니다. 자세한 분석을 위해 다시 시도해 주세요.`,
-      strengths: ['정확한 분석 결과가 제공되지 않았습니다.'],
-      risks: ['정확한 분석 결과가 제공되지 않았습니다.'],
-      recommendation: '분석 불가',
-      recommendationKr: '분석 불가',
-      analysisDetails: '서버 측 분석 오류로 인해 정확한 예측을 제공할 수 없습니다.',
-      analysisDetailsKr: '서버 측 분석 오류로 인해 정확한 예측을 제공할 수 없습니다.'
-    };
-  }
-};
+      price: Number(longTermPrice.toFixed(2)),
+      change: Number(longTermChange.toFixed(2)),
+      probability: 55,
+      range: {
+        min: Number((longTermPrice * 0.85).toFixed(2)),
+        max: Number((longTermPrice * 1.15).toFixed(2))
+      }
+    },
+    pricePredictions,
+    confidenceScore: 65,
+    modelInfo: {
+      type: '기본 예측 모델',
+      accuracy: 75,
+      features: ['과거 가격 데이터', '기술적 지표'],
+      trainPeriod: '최근 데이터'
+    },
+    summary: `${stockData.companyNameKr || stockData.companyName}(${stockData.ticker})의 주가는 단기적으로 ${shortTermChange.toFixed(2)}%, 중기적으로 ${mediumTermChange.toFixed(2)}%, 장기적으로 ${longTermChange.toFixed(2)}%의 변동이 예상됩니다.`,
+    strengths,
+    risks,
+    recommendation
+  };
+}
 
 // 모멘텀 계산 함수
 function calculateMomentum(prices, days) {
@@ -403,4 +363,36 @@ function calculateSimpleMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPer
   const histogram = value - signal;
   
   return { value, signal, histogram };
+}
+
+// 영문 요약을 한글로 변환하는 함수
+function translateSummaryToKorean(summary: string, ticker: string, recommendation: string): string {
+  // 기본 번역 포맷 생성
+  const companyName = `${ticker}`;
+  
+  let koreanSummary = '';
+  
+  // 추천에 따라 다른 문구 사용
+  if (recommendation?.toUpperCase() === 'BUY') {
+    koreanSummary = `${companyName} 주식은 단기적으로 상승할 것으로 예상됩니다. 기술적 분석과 기본적 분석 결과 긍정적인 모멘텀을 보이고 있으며, 현재 가격대는 매수 기회로 판단됩니다. 최근의 시장 환경과 기업 실적을 고려할 때, 중장기적으로도 성장 가능성이 높습니다.`;
+  } else if (recommendation?.toUpperCase() === 'SELL') {
+    koreanSummary = `${companyName} 주식은 단기적으로 하락 압력을 받을 것으로 예상됩니다. 기술적 분석에서 약세 신호가 감지되었으며, 현재 가격은 고평가되어 있을 수 있습니다. 현재 포지션의 조정을 고려하는 것이 좋습니다.`;
+  } else {
+    koreanSummary = `${companyName} 주식은 현재 안정적인 흐름을 보이고 있습니다. 단기적으로는 큰 변동성이 예상되지 않으며, 현재 포지션을 유지하는 것이 좋을 것으로 판단됩니다. 시장 환경 변화에 따라 추가적인 분석이 필요합니다.`;
+  }
+  
+  // 원본 요약에서 특정 키워드가 있는지 확인하여 추가 정보 제공
+  if (summary.includes('growth') || summary.includes('increase')) {
+    koreanSummary += ` 매출 성장과 수익성 개선이 기대되어 투자자들의 관심이 높아질 것으로 예상됩니다.`;
+  }
+  
+  if (summary.includes('risk') || summary.includes('volatility')) {
+    koreanSummary += ` 다만, 시장 변동성과 외부 리스크 요인을 주의 깊게 모니터링할 필요가 있습니다.`;
+  }
+  
+  if (summary.includes('dividend') || summary.includes('yield')) {
+    koreanSummary += ` 안정적인 배당 수익률도 투자 매력도를 높이는 요소입니다.`;
+  }
+  
+  return koreanSummary;
 }

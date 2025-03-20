@@ -1,4 +1,99 @@
 // 주식 데이터 타입
+export interface HistoricalPrice {
+  date: string;
+  price: number;
+  volume: number;
+  open: number;
+  high: number;
+  low: number;
+}
+
+export interface TechnicalIndicators {
+  rsi: number;
+  macd: {
+    value: number;
+    signal: number;
+    histogram: number;
+  };
+  bollingerBands: {
+    upper: number;
+    middle: number;
+    lower: number;
+    width: number;
+  };
+  ma50: number;
+  ma200: number;
+  ema20: number;
+  ema50: number;
+  atr: number;
+  obv: number;
+  stochastic: {
+    k: number;
+    d: number;
+  };
+  adx: number;
+  supportLevels: number[];
+  resistanceLevels: number[];
+}
+
+export interface Fundamentals {
+  pe: number;
+  eps: number;
+  dividendYield: number;
+  peg: number;
+  roe: number;
+  debtToEquity: number;
+  revenue: number;
+  revenueGrowth: number;
+  netIncome: number;
+  netIncomeGrowth: number;
+  operatingMargin: number;
+  forwardPE: number;
+  epsGrowth: number;
+  dividendGrowth: number;
+  pb: number;
+  ps: number;
+  pcf: number;
+  roa: number;
+  roic: number;
+  currentRatio: number;
+  quickRatio: number;
+  grossMargin: number;
+  fcf: number;
+  fcfGrowth: number;
+  nextEarningsDate: string;
+  analystRatings: {
+    buy: number;
+    hold: number;
+    sell: number;
+    targetPrice: number;
+  };
+}
+
+export interface NewsItem {
+  title: string;
+  source: string;
+  date: string;
+  url: string;
+  sentiment: string;
+}
+
+export interface UpcomingEvent {
+  date: string;
+  type: string;
+  title: string;
+  description: string;
+  impact: string;
+}
+
+export interface Momentum {
+  shortTerm: number;
+  mediumTerm: number;
+  longTerm: number;
+  relativeStrength: number;
+  sectorPerformance: number;
+}
+
 export interface StockData {
   ticker: string;
   companyName: string;
@@ -11,106 +106,16 @@ export interface StockData {
   volume: number;
   high52Week: number;
   low52Week: number;
-  lastUpdated: string;
   description: string;
   descriptionKr: string;
-  historicalPrices: {
-    date: string;
-    price: number;
-    volume: number;
-    open: number;
-    high: number;
-    low: number;
-  }[];
-  technicalIndicators: {
-    rsi: number;
-    macd: {
-      value: number;
-      signal: number;
-      histogram: number;
-    };
-    bollingerBands: {
-      upper: number;
-      middle: number;
-      lower: number;
-      width: number;
-    };
-    ma50: number;
-    ma200: number;
-    ema20: number;
-    ema50: number;
-    atr: number;
-    obv: number;
-    stochastic: {
-      k: number;
-      d: number;
-    };
-    adx: number;
-    supportLevels: number[];
-    resistanceLevels: number[];
-  };
-  fundamentals: {
-    pe: number;
-    forwardPE: number;
-    eps: number;
-    epsGrowth: number;
-    dividendYield: number;
-    dividendGrowth: number;
-    peg: number;
-    pb: number;
-    ps: number;
-    pcf: number;
-    roe: number;
-    roa: number;
-    roic: number;
-    debtToEquity: number;
-    currentRatio: number;
-    quickRatio: number;
-    revenue: number;
-    revenueGrowth: number;
-    grossMargin: number;
-    netIncome: number;
-    netIncomeGrowth: number;
-    operatingMargin: number;
-    fcf: number;
-    fcfGrowth: number;
-    nextEarningsDate: string;
-    analystRatings: {
-      buy: number;
-      hold: number;
-      sell: number;
-      targetPrice: number;
-    };
-  };
-  news: {
-    title: string;
-    source: string;
-    date: string;
-    url: string;
-    sentiment: 'positive' | 'negative' | 'neutral';
-  }[];
-  patterns: {
-    name: string;
-    description: string;
-    descriptionKr: string;
-    bullish: boolean;
-    confidence: number;
-    formationDate: string;
-  }[];
-  upcomingEvents: {
-    date: string;
-    type: string;
-    title: string;
-    description: string;
-    impact: 'high' | 'medium' | 'low';
-  }[];
-  momentum: {
-    shortTerm: number;
-    mediumTerm: number;
-    longTerm: number;
-    relativeStrength: number;
-    sectorPerformance: number;
-  };
+  historicalPrices: HistoricalPrice[];
+  technicalIndicators: TechnicalIndicators;
+  fundamentals: Fundamentals;
+  news: NewsItem[];
+  patterns: string[];
+  upcomingEvents: UpcomingEvent[];
+  momentum: Momentum;
+  lastUpdated: string;
 }
 
 // 간소화된 경제 지표 타입
@@ -126,65 +131,54 @@ export interface SimpleEconomicIndicator {
 
 // 경제 지표 타입
 export interface EconomicIndicator {
-  id: string;
   name: string;
   nameKr: string;
-  category: string;
   value: number;
   unit: string;
-  date: string;
-  monthlyChange: number;
-  yearlyChange: number;
-  trend: 'up' | 'down' | 'stable';
-  impact: 'positive' | 'negative' | 'neutral';
+  change: number;
+  previousPeriod: string;
+  source: string;
   description: string;
-  descriptionKr: string;
-  historicalData: {
-    date: string;
-    value: number;
-  }[];
+  impact: string;
 }
 
 // 예측 결과 타입
+export interface PriceRange {
+  min: number;
+  max: number;
+}
+
+export interface TermPrediction {
+  price: number;
+  change: number;
+  probability: number;
+  range: PriceRange;
+}
+
+export interface PricePrediction {
+  date: string;
+  predictedPrice: number;
+  range: PriceRange;
+}
+
+export interface ModelInfo {
+  type: string;
+  accuracy: number;
+  features: string[];
+  trainPeriod: string;
+}
+
 export interface PredictionResult {
-  shortTerm: {
-    price: number;
-    change: number;
-    probability: number;
-    range: { min: number; max: number };
-  };
-  mediumTerm: {
-    price: number;
-    change: number;
-    probability: number;
-    range: { min: number; max: number };
-  };
-  longTerm: {
-    price: number;
-    change: number;
-    probability: number;
-    range: { min: number; max: number };
-  };
-  pricePredictions: {
-    date: string;
-    predictedPrice: number;
-    range: { min: number; max: number };
-  }[];
+  shortTerm: TermPrediction;
+  mediumTerm: TermPrediction;
+  longTerm: TermPrediction;
+  pricePredictions: PricePrediction[];
   confidenceScore: number;
-  modelInfo: {
-    type: string;
-    accuracy: number;
-    features: string[];
-    trainPeriod: string;
-  };
+  modelInfo: ModelInfo;
   summary: string;
-  summaryKr: string;
   strengths: string[];
   risks: string[];
   recommendation: string;
-  recommendationKr: string;
-  analysisDetails: string;
-  analysisDetailsKr: string;
 }
 
 // AI 분석 요청 타입
@@ -264,4 +258,18 @@ export interface EconomicApiParams {
 export interface ApiError {
   code: string;
   message: string;
+}
+
+// 차트 패턴 타입
+export interface ChartPattern {
+  name: string;
+  bullish: boolean;
+  descriptionKr: string;
+  confidence: number;
+  tradingActions?: string;
+}
+
+// 패턴이 포함된 주식 데이터 타입
+export interface StockDataWithPatterns extends Omit<StockData, 'patterns'> {
+  patterns: ChartPattern[];
 } 
