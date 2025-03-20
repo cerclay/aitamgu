@@ -218,8 +218,8 @@ export default function NewBlogPost() {
                 <li><code>&lt;strong&gt;...&lt;/strong&gt;</code> - 굵은 글씨</li>
                 <li><code>&lt;em&gt;...&lt;/em&gt;</code> - 기울임 글씨</li>
                 <li><code>&lt;ul&gt;&lt;li&gt;...&lt;/li&gt;&lt;/ul&gt;</code> - 목록</li>
-                <li><code>&lt;a href="URL"&gt;...&lt;/a&gt;</code> - 링크</li>
-                <li><code>&lt;img src="URL" alt="설명"&gt;</code> - 이미지</li>
+                <li><code>&lt;a href=&quot;URL&quot;&gt;...&lt;/a&gt;</code> - 링크</li>
+                <li><code>&lt;img src=&quot;URL&quot; alt=&quot;설명&quot;&gt;</code> - 이미지</li>
               </ul>
             </div>
           </div>

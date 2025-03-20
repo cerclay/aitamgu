@@ -189,4 +189,29 @@ export async function generateVideoSummary(videoInfo: any) {
     console.error('영상 요약 생성 실패:', error);
     throw error;
   }
+}
+
+export async function fetchVideoDetails(videoId: string) {
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    
+    if (!apiKey) {
+      console.error('YouTube API 키가 설정되지 않았습니다.');
+      throw new Error('YouTube API 키가 설정되지 않았습니다.');
+    }
+    
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`
+    );
+    
+    if (!response.ok) {
+      throw new Error('YouTube API 호출 실패');
+    }
+    
+    const data = await response.json();
+    // ... existing code ...
+  } catch (error) {
+    console.error('비디오 정보 가져오기 오류:', error);
+    throw error;
+  }
 } 

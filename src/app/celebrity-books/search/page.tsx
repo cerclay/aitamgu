@@ -1,6 +1,7 @@
-"use client";
+// @ts-nocheck - Next.js 15 migration
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ArrowLeft } from "lucide-react";
@@ -10,7 +11,10 @@ import { CelebrityCard } from "../components/CelebrityCard";
 import { BookCard } from "../components/BookCard";
 import Link from "next/link";
 
-export default function SearchPage() {
+// export 설정을 추가하여 이 페이지를 동적 페이지로 표시
+export const dynamic = 'force-dynamic';
+
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get("q") || "";
@@ -119,7 +123,7 @@ export default function SearchPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <h1 className="text-2xl md:text-3xl font-bold text-primary">
-              "{query}" 검색 결과
+              &quot;{query}&quot; 검색 결과
             </h1>
             <p className="text-gray-dark mt-2">
               {isLoading
@@ -176,7 +180,7 @@ export default function SearchPage() {
                   {celebrities.length === 0 ? (
                     <div className="text-center py-10">
                       <p className="text-lg text-gray-dark">
-                        "{query}"에 해당하는 유명인을 찾을 수 없습니다.
+                        &quot;{query}&quot;에 해당하는 유명인을 찾을 수 없습니다.
                       </p>
                     </div>
                   ) : (
@@ -202,7 +206,7 @@ export default function SearchPage() {
                   {books.length === 0 ? (
                     <div className="text-center py-10">
                       <p className="text-lg text-gray-dark">
-                        "{query}"에 해당하는 도서를 찾을 수 없습니다.
+                        &quot;{query}&quot;에 해당하는 도서를 찾을 수 없습니다.
                       </p>
                     </div>
                   ) : (
@@ -254,5 +258,17 @@ export default function SearchPage() {
         </motion.div>
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 } 

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { api } from "./api";
 import { Celebrity, CategoryFilter } from "./types";
 import { CelebrityCard } from "./components/CelebrityCard";
 
-export default function CelebrityBooksPage() {
+// 이 페이지를 동적 페이지로 표시
+export const dynamic = 'force-dynamic';
+
+function CelebrityBooksContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") as CategoryFilter | null;
   
@@ -31,55 +34,37 @@ export default function CelebrityBooksPage() {
   useEffect(() => {
     const fetchCelebrities = async () => {
       setIsLoading(true);
+      setError(null);
+
       try {
-        const response = await api.getCelebritiesByCategory(
-          categoryParam || "all"
-        );
+        const response = await api.getCelebritiesByCategory(activeCategory);
         if (response.success && response.data) {
           setCelebrities(response.data);
         } else {
-          setError(response.error || "데이터를 불러오는데 실패했습니다.");
+          setError("데이터를 불러오는데 실패했습니다.");
         }
       } catch (err) {
-        setError("서버 연결에 실패했습니다.");
+        console.error("Error fetching celebrities:", err);
+        setError("데이터를 불러오는데 실패했습니다.");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCelebrities();
-  }, [categoryParam]);
+  }, [activeCategory]);
 
-  // 카테고리 변경 핸들러
   const handleCategoryChange = (category: CategoryFilter) => {
-    setActiveCategory(category);
+    // URL 파라미터 업데이트
     const url = new URL(window.location.href);
-    
     if (category === "all") {
       url.searchParams.delete("category");
     } else {
       url.searchParams.set("category", category);
     }
-    
     window.history.pushState({}, "", url.toString());
-    
-    const fetchCelebrities = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.getCelebritiesByCategory(category);
-        if (response.success && response.data) {
-          setCelebrities(response.data);
-        } else {
-          setError(response.error || "데이터를 불러오는데 실패했습니다.");
-        }
-      } catch (err) {
-        setError("서버 연결에 실패했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchCelebrities();
+    setActiveCategory(category);
   };
 
   return (
@@ -197,5 +182,17 @@ export default function CelebrityBooksPage() {
         </div>
       </motion.section>
     </div>
+  );
+}
+
+export default function CelebrityBooksPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+      </div>
+    }>
+      <CelebrityBooksContent />
+    </Suspense>
   );
 } 

@@ -37,7 +37,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [stream]);
 
   const captureImage = () => {
     if (videoRef.current && canvasRef.current) {

@@ -69,7 +69,7 @@ export function BookCard({
               className="mt-3 p-3 bg-neutral rounded-md"
             >
               <p className="text-sm text-gray-dark italic">
-                "<span className="text-accent">{book.recommendationText}</span>"
+                &quot;<span className="text-accent">{book.recommendationText}</span>&quot;
               </p>
             </motion.div>
           )}

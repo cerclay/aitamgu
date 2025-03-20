@@ -113,6 +113,17 @@ export interface StockData {
   };
 }
 
+// 간소화된 경제 지표 타입
+export interface SimpleEconomicIndicator {
+  name: string;
+  value: number;
+  unit: string;
+  period: string;
+  trend: 'up' | 'down' | 'stable';
+  changePercent: number;
+  description: string;
+}
+
 // 경제 지표 타입
 export interface EconomicIndicator {
   id: string;

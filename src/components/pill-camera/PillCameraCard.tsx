@@ -114,7 +114,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
             facingMode: facingMode,
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            // @ts-ignore - 일부 브라우저에서만 작동하는 고급 기능
+            // @ts-expect-error - 일부 브라우저에서만 작동하는 고급 기능
             zoom: zoomLevel
           }
         };
@@ -156,7 +156,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
       // Flash 제어 (일부 기기만 지원)
       const newFlashState = !flashOn;
       
-      // @ts-ignore - applyConstraints는 표준이지만 일부 브라우저에서만 지원
+      // @ts-expect-error - applyConstraints는 표준이지만 일부 브라우저에서만 지원
       if (videoTrack.applyConstraints) {
         await videoTrack.applyConstraints({
           advanced: [{ torch: newFlashState }]
@@ -179,7 +179,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
     if (streamRef.current) {
       const videoTrack = streamRef.current.getVideoTracks()[0];
       try {
-        // @ts-ignore - 일부 기기에서만 지원
+        // @ts-expect-error - 일부 기기에서만 지원
         if (videoTrack.applyConstraints) {
           videoTrack.applyConstraints({
             advanced: [{ zoom }]
