@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Camera, FileUp, Upload, ImageIcon, RefreshCw, X, ZoomIn, Loader2 } from 'lucide-react';
+import { Camera, FileUp, Upload, ImageIcon, RefreshCw, X, ZoomIn, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,16 +74,11 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
       return;
     }
     
-    try {
-      onPillAnalysis(fileInputRef.current.files[0])
-        .catch(err => {
-          console.error('알약 분석 중 오류:', err);
-          setError('알약 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
-        });
-    } catch (err) {
-      console.error('알약 분석 중 오류:', err);
-      setError('알약 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
+    onPillAnalysis(fileInputRef.current.files[0])
+      .catch(err => {
+        console.error('알약 분석 중 오류:', err);
+        setError('알약 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+      });
   };
 
   const getAvailableDeviceCapabilities = async (stream: MediaStream) => {
@@ -248,17 +243,7 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
       };
       updateZoom();
     }
-  }, [zoomLevel, isStreaming, startCamera]);
-
-  // facingMode 변경 시 카메라 재시작
-  useEffect(() => {
-    if (activeTab === 'camera') {
-      stopCamera();
-      setTimeout(() => {
-        startCamera();
-      }, 300);
-    }
-  }, [facingMode, activeTab, stopCamera, startCamera]);
+  }, [zoomLevel, startCamera, isStreaming]);
 
   // 컴포넌트 언마운트 시 카메라 중지
   useEffect(() => {
@@ -268,239 +253,198 @@ export function PillCameraCard({ onPillAnalysis, isLoading }: PillCameraCardProp
   }, [stopCamera]);
 
   return (
-    <Card className="w-full overflow-hidden border border-blue-100 shadow-md">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4">
-        <CardTitle className="flex items-center text-blue-700 text-lg">
-          <Camera className="mr-2 h-4 w-4" />
-          알약 촬영
-        </CardTitle>
-        <CardDescription className="text-xs">
-          알약을 업로드하거나 촬영하세요
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-none">
-            <TabsTrigger value="upload" className="data-[state=active]:bg-blue-50 py-2 text-sm">
-              <Upload className="mr-1 h-3 w-3" />
-              이미지 업로드
-            </TabsTrigger>
-            <TabsTrigger value="camera" className="data-[state=active]:bg-blue-50 py-2 text-sm">
-              <Camera className="mr-1 h-3 w-3" />
-              카메라 촬영
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="upload" className="space-y-4 p-4">
-            <div className="flex items-center justify-center w-full">
-              <label
-                htmlFor="pill-image-upload"
-                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all"
+    <Card className="w-full border border-blue-100 shadow-md overflow-hidden">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 h-12">
+          <TabsTrigger value="upload" disabled={isLoading} className="data-[state=active]:bg-blue-50">
+            <FileUp className="h-4 w-4 mr-2" />
+            이미지 업로드
+          </TabsTrigger>
+          <TabsTrigger value="camera" disabled={isLoading} className="data-[state=active]:bg-blue-50">
+            <Camera className="h-4 w-4 mr-2" />
+            카메라 촬영
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="upload" className="m-0">
+          <CardContent className="p-4 space-y-4">
+            <div className="relative">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isLoading}
+                className="hidden"
+              />
+              
+              <motion.div 
+                className="relative w-full aspect-[4/3] bg-gray-50 rounded-lg overflow-hidden"
+                initial={false}
+                animate={{ 
+                  scale: previewUrl ? 1 : 0.98,
+                  opacity: previewUrl ? 1 : 0.9
+                }}
+                transition={{ duration: 0.2 }}
               >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <FileUp className="w-6 h-6 text-gray-500 mb-2" />
-                  <p className="text-xs text-gray-500">
-                    <span className="font-semibold">클릭해서 이미지 업로드</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG</p>
-                </div>
-                <input
-                  id="pill-image-upload"
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                />
-              </label>
+                {previewUrl ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={previewUrl} 
+                      alt="미리보기" 
+                      className="w-full h-full object-contain"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
+                      onClick={resetFileInput}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className="w-full h-full flex flex-col items-center justify-center gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                  >
+                    <ImageIcon className="h-8 w-8 text-gray-400" />
+                    <span className="text-sm text-gray-500">
+                      클릭하여 이미지 선택
+                    </span>
+                  </Button>
+                )}
+              </motion.div>
             </div>
-            
+
             <AnimatePresence>
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                 >
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            <AnimatePresence>
-              {previewUrl && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-2"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-gray-500 flex items-center">
-                      <ImageIcon className="h-3 w-3 mr-1" />
-                      미리보기
-                    </p>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-5 w-5" 
-                      onClick={resetFileInput}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="relative aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-md border shadow-sm">
-                    <img
-                      src={previewUrl}
-                      alt="알약 미리보기"
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                </motion.div>
+
+            <Button 
+              className="w-full" 
+              onClick={handleUpload}
+              disabled={!previewUrl || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  분석 중...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  이미지 분석하기
+                </>
               )}
-            </AnimatePresence>
-          </TabsContent>
-          
-          <TabsContent value="camera" className="space-y-3 p-4">
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black shadow-sm">
+            </Button>
+          </CardContent>
+        </TabsContent>
+
+        <TabsContent value="camera" className="m-0">
+          <CardContent className="p-4 space-y-4">
+            <div className="relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="h-full w-full object-cover"
+                className="w-full h-full object-cover"
               />
+              
               <canvas ref={canvasRef} className="hidden" />
               
-              {isStreaming && (
-                <div className="absolute bottom-3 right-3 flex gap-2">
-                  {hasFlash && (
-                    <Button 
-                      size="icon" 
-                      variant="secondary" 
-                      onClick={toggleFlash}
-                      className={`rounded-full backdrop-blur-sm ${flashOn ? 'bg-yellow-400 text-black' : 'bg-white/80 hover:bg-white'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full border ${flashOn ? 'bg-yellow-400 border-yellow-600' : 'bg-white border-gray-400'}`} />
-                    </Button>
-                  )}
-                  <Button 
-                    size="icon" 
-                    variant="secondary" 
-                    onClick={switchCamera}
-                    className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
+              <AnimatePresence>
+                {isStreaming && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2"
                   >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              
-              {isStreaming && (
-                <div className="absolute top-3 left-3 right-3 flex items-center">
-                  <ZoomIn className="h-3 w-3 text-white mr-2" />
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="5" 
-                    step="0.5" 
-                    value={zoomLevel} 
-                    onChange={(e) => handleZoom(parseFloat(e.target.value))} 
-                    className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer" 
-                  />
-                  <span className="text-white text-xs ml-2">{zoomLevel}x</span>
-                </div>
-              )}
-              
-              {!isStreaming && !cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                  <div className="text-center text-white">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p className="text-sm">카메라 연결 중...</p>
-                  </div>
-                </div>
-              )}
+                    {hasFlash && (
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="bg-white/80 hover:bg-white/90"
+                        onClick={toggleFlash}
+                      >
+                        <motion.div
+                          animate={{ scale: flashOn ? 1.1 : 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {/* Flash icon */}
+                        </motion.div>
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="bg-white/80 hover:bg-white/90"
+                      onClick={switchCamera}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="bg-white/80 hover:bg-white/90"
+                      onClick={() => handleZoom(zoomLevel === 1 ? 2 : 1)}
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            
+
             <AnimatePresence>
               {cameraError && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                 >
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{cameraError}</AlertDescription>
                   </Alert>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            <AnimatePresence>
-              {previewUrl && activeTab === 'camera' && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-2"
-                >
-                  <p className="text-xs text-gray-500 mb-1 flex items-center">
-                    <ImageIcon className="h-3 w-3 mr-1" />
-                    촬영된 이미지
-                  </p>
-                  <div className="relative aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-md border shadow-sm">
-                    <img
-                      src={previewUrl}
-                      alt="알약 미리보기"
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                </motion.div>
+
+            <Button 
+              className="w-full" 
+              onClick={captureImage}
+              disabled={!isStreaming || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  분석 중...
+                </>
+              ) : (
+                <>
+                  <Camera className="mr-2 h-4 w-4" />
+                  사진 촬영하기
+                </>
               )}
-            </AnimatePresence>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-      
-      <CardFooter className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
-        {activeTab === 'upload' ? (
-          <Button 
-            onClick={handleUpload} 
-            disabled={!previewUrl || isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 h-10"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                분석 중...
-              </>
-            ) : (
-              <>
-                알약 분석하기
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button 
-            onClick={captureImage} 
-            disabled={!isStreaming || isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 h-10"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                분석 중...
-              </>
-            ) : (
-              <>
-                사진 촬영하기
-              </>
-            )}
-          </Button>
-        )}
-      </CardFooter>
+            </Button>
+          </CardContent>
+        </TabsContent>
+      </Tabs>
     </Card>
   );
 } 

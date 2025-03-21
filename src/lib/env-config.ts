@@ -16,8 +16,8 @@ export const SERVERLESS_TIMEOUT = 10000; // 10초
 
 // API 키 중앙 관리
 export const API_KEYS = {
-  GEMINI: getEnvVariable('GEMINI_API_KEY'),
-  YOUTUBE: getEnvVariable('YOUTUBE_API_KEY'),
+  GEMINI: getEnvVariable('GEMINI_API_KEY') || 'AIzaSyC_Woxwt323fN5CRAHbGRrzAp10bGZMA_4',
+  YOUTUBE: getEnvVariable('YOUTUBE_API_KEY') || 'AIzaSyDtg7fx2MakWHIDLrDbfUFEgEOBUjWCwOQ',
   YAHOO_FINANCE: getEnvVariable('YAHOO_FINANCE_API_KEY'),
   FRED: getEnvVariable('FRED_API_KEY'),
 }; 

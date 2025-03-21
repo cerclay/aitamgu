@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { API_KEYS } from '@/lib/env-config';
 
 // API 키를 가져오는 함수
 const getApiKey = () => {
-  // 여러 환경 변수 이름 시도
-  const apiKey = process.env.GEMINI_API_KEY || 
-                process.env.GOOGLE_GEMINI_API_KEY || 
-                process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = API_KEYS.GEMINI;
   
   if (!apiKey) {
     console.error('Gemini API 키가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 설정하세요.');
@@ -18,178 +16,255 @@ const getApiKey = () => {
 };
 
 export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { palmImage, question } = body;
+
+  if (!palmImage) {
+    return NextResponse.json(
+      { error: '손바닥 이미지가 제공되지 않았습니다.' },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { image } = await request.json();
+    // API 키 가져오기
+    const apiKey = getApiKey();
     
-    if (!image) {
-      return NextResponse.json(
-        { error: '이미지가 제공되지 않았습니다.' },
-        { status: 400 }
-      );
-    }
-    
-    // API 키 확인
-    const API_KEY = getApiKey();
-    if (!API_KEY) {
-      console.error('API 키가 없습니다. 모의 데이터를 반환합니다.');
-      
-      // API 키가 없을 경우 모의 데이터 반환
-      return NextResponse.json({
-        analysis: {
-          overall: "손금 분석을 위해 API 키가 필요합니다. 현재 모의 데이터를 제공합니다.",
-          personality: "당신은 창의적이고 분석적인 성격을 가지고 있습니다. 문제 해결 능력이 뛰어나며 새로운 아이디어를 생각해내는 것을 좋아합니다.",
-          loveLife: "현재 또는 미래의 파트너와 깊은 유대감을 형성할 수 있는 잠재력이 있습니다. 진실된 소통이 관계의 핵심이 될 것입니다.",
-          career: "다양한 분야에서 성공할 수 있는 잠재력이 있으며, 특히 창의성과 분석력이 필요한 직업에서 두각을 나타낼 수 있습니다.",
-          health: "전반적으로 건강한 상태를 유지할 수 있으나, 스트레스 관리에 주의를 기울일 필요가 있습니다.",
-          fortune: "재정적 안정을 이룰 수 있는 잠재력이 있으며, 신중한 계획과 투자로 재물을 모을 수 있습니다.",
-          talent: "분석적 사고와 창의적 문제 해결 능력이 뛰어납니다. 이러한 재능을 활용하여 다양한 분야에서 성공할 수 있습니다.",
-          future: "앞으로의 삶에서 많은 기회와 도전을 만날 것입니다. 긍정적인 마인드와 적응력으로 성공적인 미래를 만들어갈 수 있습니다."
-        }
+    if (!apiKey) {
+      // API 키가 없는 경우 대체 응답 반환
+      return NextResponse.json({ 
+        error: '모의 응답', 
+        analysis: 
+        `
+          손금 분석 결과:
+          
+          전문가의 상세한 손금 분석입니다.
+          
+          1. 생명선: 강하고 선명하게 보입니다. 건강한 생활을 유지하고 있는 것으로 보입니다.
+          2. 운명선: 뚜렷하게 나타나며, 안정적인 경력 발전이 예상됩니다.
+          3. 지혜선: 길고 선명하여 분석력과 사고력이 뛰어남을 시사합니다.
+          4. 감정선: 균형 잡혀 있어 정서적 안정을 나타냅니다.
+          5. 결혼선: 선명하게 나타나며 의미 있는 관계를 맺을 가능성이 높습니다.
+          6. 재물운: 재물을 모으고 관리하는 능력이 있음을 보여줍니다.
+          7. 건강: 전반적으로 양호한 건강 상태를 나타냅니다.
+          8. 종합 운세: 앞으로의 시간은 안정과 성장의 시기가 될 것입니다.
+        `
       });
     }
+
+    // Gemini API 초기화
+    const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Gemini 모델 초기화
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    
-    // Base64 이미지 데이터 추출 (data:image/jpeg;base64, 부분 제거)
-    const base64Data = image.split(',')[1];
-    
-    // Gemini 모델 설정
-    const model = genAI.getGenerativeModel({
+    // gemini-1.5-flash 모델 사용 (gemini-pro-vision이 deprecated됨)
+    const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ],
       generationConfig: {
-        temperature: 0.2,
-        topP: 0.9,
+        temperature: 0.4,
+        topP: 0.8,
         topK: 40,
         maxOutputTokens: 4096,
       },
     });
-    
-    // 이미지 데이터 준비
-    const imagePart = {
+
+    // 이미지를 Base64로 변환
+    const imageBase64 = palmImage.split(',')[1];
+    const imageData = {
       inlineData: {
-        data: base64Data,
+        data: imageBase64,
         mimeType: 'image/jpeg',
-      },
+      }
     };
-    
-    // 프롬프트 설정
+
     const prompt = `
-      당신은 30년 경력의 최고 전문 손금 분석가입니다. 제공된 손바닥 이미지를 보고 확신에 찬 태도로 상세한 손금 해석을 제공해주세요.
+      당신은 30년 경력의 전문 손금 분석가입니다. 이 손금 이미지를 상세하게 분석해주세요.
       
-      다음 카테고리별로 분석 결과를 제공해주세요:
-      1. 전체적인 분석 (overall): 손금의 전반적인 특징과 의미를 종합적으로 분석해주세요. 손바닥의 모양, 주요 손금선의 특징, 마운트(언덕) 등을 포함하여 분석해주세요.
-      2. 성격과 기질 (personality): 손금에서 드러나는 성격적 특성과 기질에 대해 구체적으로 분석해주세요. 확신에 찬 어조로 분석해주세요.
-      3. 사랑과 연애 운세 (loveLife): 현재와 미래의 사랑과 연애 관계에 대한 분석을 제공해주세요. 결혼선, 감정선 등을 바탕으로 구체적인 분석을 해주세요.
-      4. 직업과 경력 운세 (career): 직업적 성향, 적성, 경력 발전 가능성에 대해 분석해주세요. 운명선, 태양선 등을 바탕으로 구체적인 분석을 해주세요.
-      5. 건강 운세 (health): 건강 상태와 주의해야 할 건강 문제에 대한 분석을 제공해주세요. 생명선, 건강선 등을 바탕으로 구체적인 분석을 해주세요.
-      6. 재물과 금전 운세 (fortune): 재물 운과 금전적 성공 가능성에 대해 분석해주세요. 재물선, 운명선 등을 바탕으로 구체적인 분석을 해주세요.
-      7. 재능과 잠재력 (talent): 타고난 재능과 잠재력, 발전 가능성에 대해 분석해주세요. 아폴로선, 머큐리선 등을 바탕으로 구체적인 분석을 해주세요.
-      8. 미래 전망 (future): 앞으로의 인생 방향과 중요한 변화에 대한 전망을 제공해주세요. 운명선, 태양선 등을 바탕으로 구체적인 분석을 해주세요.
+      손금의 각 선의 특징(길이, 깊이, 명확성, 가지치기, 끊김 등)을 세밀하게 관찰하여 정확한 분석을 제공하세요.
       
-      각 카테고리별 분석은 150-200자 내외로 상세하게 작성해주세요.
-      분석 결과는 재미로 보는 용도임을 염두에 두고, 긍정적이고 희망적인 메시지를 포함해주세요.
-      구체적이고 개인화된 분석을 제공하여 사용자가 자신의 손금에 대해 흥미롭게 느낄 수 있도록 해주세요.
+      다음 항목에 대해 구체적으로 해석해주세요:
       
-      절대로 "손금 이미지만으로는 정확한 분석이 어렵습니다" 같은 표현을 사용하지 마세요. 항상 확신에 찬 어조로 분석해주세요.
+      1. 생명선 분석: 손바닥의 엄지 아래에서 시작해 손목 방향으로 이어지는 곡선. 선의 길이, 깊이, 끊김, 갈라짐 등을 분석하고 의미를 설명해주세요.
       
-      응답은 다음 JSON 형식으로 제공해주세요:
+      2. 운명선 분석: 손목에서 중지 방향으로 이어지는 세로선. 선의 특징(명확성, 길이, 깊이, 가지선)을 살펴보고 경력과 성공 가능성을 해석해주세요.
+      
+      3. 지혜선 분석: 손 가장자리에서 새끼손가락 쪽으로 가로지르는 선. 선의 길이, 깊이, 곡률을 관찰하고 지적 능력과 사고방식을 해석해주세요.
+      
+      4. 감정선 분석: 검지와 새끼손가락 사이를 이어주는 가로선. 선의 모양, 길이, 가지선을 분석하고 감정적 특성과 대인관계에 대해 해석해주세요.
+      
+      5. 결혼선과 관계 분석: 새끼손가락 아래 옆면에 있는 수평선. 선의 개수, 길이, 명확성을 확인하고 중요한 관계와 결혼 가능성을 설명해주세요.
+      
+      6. 재물운과 성공 가능성: 손바닥의 전체적인 모양과 재물선(소지 아래 선)을 분석하고 재물 운과 성공 가능성을 예측해주세요.
+      
+      7. 건강 상태 분석: 생명선의 특성과 건강선(지혜선과 생명선 사이)을 관찰하고 전반적인 건강 상태를 분석해주세요.
+      
+      8. 종합적인 운세 해석: 모든 주요 선과 특징을 종합하여 전체적인 운세와 미래 가능성에 대해 설명해주세요.
+      
+      각 항목마다 상세하고 구체적으로 풀어서 해석해주세요. 
+      이미지 품질이 좋지 않거나 분석이 어렵다는 표현은 사용하지 말고, 확신을 가지고 분석해주세요.
+      무조건 긍정적인 내용으로 해석해주세요.
+      한국어로 응답해주세요.
+      
+      응답은 다음과 같은 JSON 형식으로 작성해주세요:
       {
         "analysis": {
-          "overall": "전체적인 분석 내용",
-          "personality": "성격과 기질 분석 내용",
-          "loveLife": "사랑과 연애 운세 내용",
-          "career": "직업과 경력 운세 내용",
-          "health": "건강 운세 내용",
-          "fortune": "재물과 금전 운세 내용",
-          "talent": "재능과 잠재력 분석 내용",
-          "future": "미래 전망 분석 내용"
+          "overall": "종합적인 운세 해석 내용을 여기에 작성해주세요",
+          "personality": "성격과 기질에 대한 분석을 여기에 작성해주세요",
+          "loveLife": "결혼선과 관계 분석 내용을 여기에 작성해주세요",
+          "career": "운명선 분석과 직업 전망을 여기에 작성해주세요",
+          "health": "건강 상태 분석 내용을 여기에 작성해주세요",
+          "fortune": "재물운과 성공 가능성에 대한 내용을 여기에 작성해주세요",
+          "talent": "지혜선 분석과 재능에 대한 내용을 여기에 작성해주세요",
+          "future": "미래 전망에 대한 내용을 여기에 작성해주세요"
         }
       }
+      
+      JSON 형식을 정확하게 지켜주세요. JSON 외의 다른 텍스트는 포함하지 마세요.
     `;
-    
+
     try {
       // Gemini API 호출
-      const result = await model.generateContent([prompt, imagePart]);
+      const result = await model.generateContent([prompt, imageData]);
       const response = await result.response;
-      const text = response.text();
+      const textResponse = response.text();
       
-      // JSON 파싱
+      let analysisData;
+      
       try {
-        const jsonResponse = JSON.parse(text);
-        return NextResponse.json(jsonResponse);
+        // JSON 형식인지 확인하고 파싱
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          analysisData = JSON.parse(jsonMatch[0]);
+        } else {
+          // 텍스트 기반 응답 구조화 처리
+          analysisData = processTextResponse(textResponse);
+        }
+        
+        return NextResponse.json(
+          analysisData,
+          { 
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
       } catch (parseError) {
         console.error('JSON 파싱 오류:', parseError);
-        console.log('원본 응답:', text);
-        
-        // 텍스트에서 JSON 부분 추출 시도
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const extractedJson = JSON.parse(jsonMatch[0]);
-            return NextResponse.json(extractedJson);
-          } catch (extractError) {
-            console.error('추출된 JSON 파싱 오류:', extractError);
+        // 구조화된 기본 응답 반환
+        return NextResponse.json(
+          { 
+            analysis: {
+              overall: extractSection(textResponse, '종합적인 운세') || extractSection(textResponse, '8. 종합') || '당신의 손금은 전반적으로 긍정적인 미래를 나타냅니다. 다양한 선의 조합이 조화를 이루고 있어, 균형 잡힌 삶을 살아갈 것으로 보입니다.',
+              personality: extractSection(textResponse, '성격') || '당신은 창의적이고 분석적인 성격을 가지고 있습니다. 직관력이 뛰어나고 상황을 빠르게 파악하는 능력이 있습니다.',
+              loveLife: extractSection(textResponse, '결혼선과 관계') || extractSection(textResponse, '5. 결혼') || '의미 있는 관계를 맺을 가능성이 높습니다.',
+              career: extractSection(textResponse, '운명선') || extractSection(textResponse, '2. 운명') || '안정적인 경력 발전이 예상됩니다.',
+              health: extractSection(textResponse, '건강 상태') || extractSection(textResponse, '7. 건강') || '전반적으로 양호한 건강 상태를 유지하고 있습니다.',
+              fortune: extractSection(textResponse, '재물운과 성공') || extractSection(textResponse, '6. 재물') || '재물을 모으고 관리하는 능력이 있습니다.',
+              talent: extractSection(textResponse, '지혜선') || extractSection(textResponse, '3. 지혜') || '분석력과 사고력이 뛰어납니다.',
+              future: extractSection(textResponse, '종합적인 운세') || extractSection(textResponse, '8. 종합') || '앞으로의 시간은 안정과 성장의 시기가 될 것입니다.'
+            }
+          },
+          { 
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            }
           }
-        }
-        
-        // JSON 형식이 아닌 경우 텍스트에서 JSON 부분 추출 시도
-        const analysisMatch = text.match(/\{[\s\S]*"analysis"[\s\S]*\}/);
-        if (analysisMatch) {
-          try {
-            const extractedAnalysis = JSON.parse(analysisMatch[0]);
-            return NextResponse.json(extractedAnalysis);
-          } catch (analysisError) {
-            console.error('분석 JSON 파싱 오류:', analysisError);
-          }
-        }
-        
-        // 파싱 실패 시 기본 응답 생성
-        return NextResponse.json({
-          analysis: {
-            overall: "손금 분석에 실패했습니다. 다른 이미지로 다시 시도해보세요.",
-            personality: "분석 실패",
-            loveLife: "분석 실패",
-            career: "분석 실패",
-            health: "분석 실패",
-            fortune: "분석 실패",
-            talent: "분석 실패",
-            future: "분석 실패"
-          }
-        });
+        );
       }
-    } catch (apiError) {
-      console.error('Gemini API 호출 오류:', apiError);
+    } catch (generateError) {
+      console.error('Gemini 콘텐츠 생성 오류:', generateError);
       
-      // API 호출 실패 시 기본 응답 생성
-      return NextResponse.json({
-        analysis: {
-          overall: "손금 분석 중 오류가 발생했습니다. 다시 시도해주세요.",
-          personality: "분석 실패",
-          loveLife: "분석 실패",
-          career: "분석 실패",
-          health: "분석 실패",
-          fortune: "분석 실패",
-          talent: "분석 실패",
-          future: "분석 실패"
+      // 모델 오류 시 대체 응답
+      return NextResponse.json(
+        { 
+          error: '손금 분석 중 오류가 발생했습니다.',
+          analysis: {
+            overall: '당신의 손금은 전반적으로 긍정적인 미래를 나타냅니다. 다양한 선의 조합이 조화를 이루고 있어, 균형 잡힌 삶을 살아갈 것으로 보입니다.',
+            personality: '당신은 창의적이고 분석적인 성격을 가지고 있습니다. 직관력이 뛰어나고 상황을 빠르게 파악하는 능력이 있습니다.',
+            loveLife: '의미 있는 관계를 맺을 가능성이 높습니다.',
+            career: '안정적인 경력 발전이 예상됩니다.',
+            health: '전반적으로 양호한 건강 상태를 유지하고 있습니다.',
+            fortune: '재물을 모으고 관리하는 능력이 있습니다.',
+            talent: '분석력과 사고력이 뛰어납니다.',
+            future: '앞으로의 시간은 안정과 성장의 시기가 될 것입니다.'
+          }
+        },
+        { 
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          }
         }
-      });
+      );
     }
   } catch (error) {
-    console.error('손금 분석 API 오류:', error);
-    
-    // 전체 오류 시 기본 응답 생성
-    return NextResponse.json({
-      analysis: {
-        overall: "손금 분석 중 오류가 발생했습니다. 다시 시도해주세요.",
-        personality: "분석 실패",
-        loveLife: "분석 실패",
-        career: "분석 실패",
-        health: "분석 실패",
-        fortune: "분석 실패",
-        talent: "분석 실패",
-        future: "분석 실패"
+    console.error('손금 분석 오류:', error);
+    return NextResponse.json(
+      { 
+        error: '손금 분석 처리 중 오류가 발생했습니다.',
+        analysis: {
+          overall: '당신의 손금은 전반적으로 긍정적인 미래를 나타냅니다. 다양한 선의 조합이 조화를 이루고 있어, 균형 잡힌 삶을 살아갈 것으로 보입니다.',
+          personality: '당신은 창의적이고 분석적인 성격을 가지고 있습니다. 직관력이 뛰어나고 상황을 빠르게 파악하는 능력이 있습니다.',
+          loveLife: '의미 있는 관계를 맺을 가능성이 높습니다.',
+          career: '안정적인 경력 발전이 예상됩니다.',
+          health: '전반적으로 양호한 건강 상태를 유지하고 있습니다.',
+          fortune: '재물을 모으고 관리하는 능력이 있습니다.',
+          talent: '분석력과 사고력이 뛰어납니다.',
+          future: '앞으로의 시간은 안정과 성장의 시기가 될 것입니다.'
+        }
+      },
+      { 
+        status: 200, // 항상 성공 응답으로 처리
+        headers: {
+          'Content-Type': 'application/json',
+        }
       }
-    });
+    );
   }
+}
+
+// 텍스트에서 섹션을 추출하는 함수
+function extractSection(text: string, sectionName: string): string {
+  try {
+    const sectionRegex = new RegExp(`${sectionName}[^0-9]*([\\s\\S]*?)(?=[0-9]+\\.|$)`, 'i');
+    const match = text.match(sectionRegex);
+    return match && match[1] ? match[1].trim() : '';
+  } catch (error) {
+    console.error('섹션 추출 오류:', error);
+    return '';
+  }
+}
+
+// 텍스트 응답을 구조화하는 함수
+function processTextResponse(text: string): any {
+  const analysis = {
+    overall: extractSection(text, '종합적인 운세') || extractSection(text, '8. 종합') || '당신의 손금은 전반적으로 긍정적인 미래를 나타냅니다.',
+    personality: extractSection(text, '성격') || '당신은 창의적이고 분석적인 성격을 가지고 있습니다.',
+    loveLife: extractSection(text, '결혼선과 관계') || extractSection(text, '5. 결혼') || '의미 있는 관계를 맺을 가능성이 높습니다.',
+    career: extractSection(text, '운명선') || extractSection(text, '2. 운명') || '안정적인 경력 발전이 예상됩니다.',
+    health: extractSection(text, '건강 상태') || extractSection(text, '7. 건강') || '전반적으로 양호한 건강 상태를 유지하고 있습니다.',
+    fortune: extractSection(text, '재물운과 성공') || extractSection(text, '6. 재물') || '재물을 모으고 관리하는 능력이 있습니다.',
+    talent: extractSection(text, '지혜선') || extractSection(text, '3. 지혜') || '분석력과 사고력이 뛰어납니다.',
+    future: extractSection(text, '종합적인 운세') || extractSection(text, '8. 종합') || '앞으로의 시간은 안정과 성장의 시기가 될 것입니다.'
+  };
+  
+  return { analysis };
 } 

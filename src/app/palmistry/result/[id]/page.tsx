@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Download, Trash2, Copy, Check, Info, Heart, Brain, Activity, Star, Sparkles, Briefcase, Coins, Lightbulb, Compass, FileText, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Trash2, Copy, Check, Info, Heart, Brain, Activity, Star, Sparkles, Briefcase, Coins, Lightbulb, Compass, FileText, User, AlertCircle, Hand } from 'lucide-react';
 import { 
   FacebookShareButton, 
   TwitterShareButton, 
@@ -307,15 +307,26 @@ export default function PalmistryResultPage() {
           {/* 이미지 및 분석 결과 */}
           <div className="max-w-3xl mx-auto px-4 -mt-6">
             {/* 손바닥 이미지 */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-              <div className="p-4">
-                <h2 className="text-lg font-semibold text-gray-800 mb-2">손바닥 이미지</h2>
-                <div className="relative aspect-square max-h-[300px] overflow-hidden rounded-lg">
-                  <img 
-                    src={result.imageUrl} 
-                    alt="손바닥 이미지" 
-                    className="w-full h-full object-contain"
-                  />
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl shadow-lg overflow-hidden mb-6 border border-indigo-100">
+              <div className="p-5">
+                <h2 className="text-xl font-semibold text-indigo-800 mb-3 flex items-center">
+                  <Hand className="h-5 w-5 mr-2 text-indigo-600" />
+                  손바닥 이미지 분석
+                </h2>
+                <div className="bg-white p-3 rounded-lg shadow-inner">
+                  <div className="relative overflow-hidden rounded-lg border-2 border-indigo-200 shadow-md">
+                    <div className="aspect-square max-h-[400px] flex items-center justify-center">
+                      <img 
+                        src={result.imageUrl} 
+                        alt="손바닥 이미지" 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/10 to-transparent pointer-events-none"></div>
+                  </div>
+                  <p className="text-center text-sm text-indigo-600 mt-3 font-medium">
+                    AI가 이 손금 이미지를 분석하여 결과를 도출했습니다
+                  </p>
                 </div>
               </div>
             </div>

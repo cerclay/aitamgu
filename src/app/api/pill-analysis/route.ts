@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PillData } from '@/types/pill';
+import { parseStringPromise } from 'xml2js';
 
 // 환경 변수에서 API 키 가져오기
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -9,74 +10,198 @@ const FOOD_DRUG_API_KEY = process.env.NEXT_PUBLIC_FOOD_DRUG_API_KEY || 'd0MtqYf6
 // Google Generative AI 초기화
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-export async function POST(request: NextRequest) {
+const API_KEY = 'd0MtqYf6BcL3qZcyjiOj%2BNDT4MXxgkYs7uaidp4KKIOEJj4srjAFAQpoELiiXWq1T1IGoCnoVpx376gM0JBUvg%3D%3D';
+
+export async function POST(req: Request) {
   try {
-    // FormData에서 이미지 파일 추출
-    const formData = await request.formData();
-    const imageFile = formData.get('image') as File;
+    const { image } = await req.json();
     
-    if (!imageFile) {
-      return NextResponse.json(
-        { error: '이미지 파일이 필요합니다.' },
-        { status: 400 }
-      );
-    }
+    // 이미지 분석 API 호출 (JSON 형식 명시)
+    const searchUrl = new URL('http://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService01/getMdcinGrnIdntfcInfoList01');
+    searchUrl.searchParams.append('serviceKey', decodeURIComponent(API_KEY));
+    searchUrl.searchParams.append('numOfRows', '10');
+    searchUrl.searchParams.append('pageNo', '1');
+    searchUrl.searchParams.append('type', 'json');
     
-    // 이미지 파일을 바이트 배열로 변환
-    const imageBytes = await imageFile.arrayBuffer();
-    
-    // Gemini API를 사용하여 알약 특성 분석
-    const pillFeatures = await analyzePillWithGemini(imageBytes);
-    
-    if (!pillFeatures) {
-      // 디버깅을 위한 정보를 추가하여 반환
-      return NextResponse.json(
-        { 
-          error: '알약을 인식할 수 없습니다. 알약이 중앙에 위치한 선명한 이미지를 사용해주세요.',
-          details: '이미지에서 알약을 찾을 수 없거나 분석할 수 없습니다.'
-        },
-        { status: 400 }
-      );
-    }
-    
-    console.log('인식된 알약 특성:', pillFeatures);
-    
-    // 식품의약품안전처 API를 사용하여 알약 정보 검색
-    try {
-      const pillInfo = await searchPillInfo(pillFeatures);
-      
-      if (!pillInfo) {
-        // 알약 특성은 인식했지만 DB에서 일치하는 정보를 찾지 못한 경우
-        return NextResponse.json(
-          { 
-            error: '알약 정보를 찾을 수 없습니다. 다른 각도에서 다시 촬영해보세요.',
-            features: pillFeatures,
-            suggestion: '더 밝은 환경에서 촬영하거나 다른 각도에서 시도해보세요.' 
-          },
-          { status: 404 }
-        );
+    // 검색 조건 추가 (이미지 분석 결과를 기반으로 설정)
+    searchUrl.searchParams.append('item_name', '');
+    searchUrl.searchParams.append('entp_name', '');
+    searchUrl.searchParams.append('chart', '');
+    searchUrl.searchParams.append('drug_shape', '');
+    searchUrl.searchParams.append('color_class', '');
+    searchUrl.searchParams.append('line_front', '');
+    searchUrl.searchParams.append('line_back', '');
+    searchUrl.searchParams.append('print_front', '');
+    searchUrl.searchParams.append('print_back', '');
+
+    console.log('검색 API 요청 URL:', searchUrl.toString());
+
+    const searchResponse = await fetch(searchUrl.toString(), {
+      headers: {
+        'Accept': 'application/json'
       }
-      
-      return NextResponse.json(pillInfo);
-    } catch (apiError) {
-      console.error('식약처 API 오류:', apiError);
-      
-      // API 호출 실패 시에도 인식된 특성 정보는 사용자에게 제공
-      return NextResponse.json(
-        { 
-          error: '의약품 데이터베이스 연결 중 오류가 발생했습니다.',
-          features: pillFeatures,
-          suggestion: '잠시 후 다시 시도해주세요.'
-        },
-        { status: 503 }
-      );
+    });
+
+    if (!searchResponse.ok) {
+      throw new Error('의약품 정보 검색 실패');
     }
-  } catch (error) {
-    console.error('알약 분석 오류:', error);
+
+    const responseText = await searchResponse.text();
+    
+    // XML 응답 체크
+    if (responseText.includes('<?xml') || responseText.includes('<OpenAPI')) {
+      try {
+        const result = await parseStringPromise(responseText, { explicitArray: false });
+        
+        // 에러 메시지 확인
+        const header = result.OpenAPI_ServiceResponse?.cmmMsgHeader;
+        if (header?.returnCode !== '00' && header?.returnCode !== '0') {
+          throw new Error(header?.errMsg || 'API 호출 중 오류가 발생했습니다.');
+        }
+        
+        // 결과 아이템 추출
+        let items = result.OpenAPI_ServiceResponse?.body?.items?.item;
+        if (!items) {
+          throw new Error('알약 정보를 찾을 수 없습니다.');
+        }
+        
+        // 단일 아이템인 경우 배열로 변환
+        if (!Array.isArray(items)) {
+          items = [items];
+        }
+        
+        if (items.length === 0) {
+          throw new Error('알약 정보를 찾을 수 없습니다.');
+        }
+
+        // 상세 정보 조회
+        const itemSeq = items[0].ITEM_SEQ;
+        const detailUrl = new URL('http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService04/getDrugPrdtPrmsnDtlInq03');
+        detailUrl.searchParams.append('serviceKey', decodeURIComponent(API_KEY));
+        detailUrl.searchParams.append('item_seq', itemSeq);
+        detailUrl.searchParams.append('type', 'json');
+
+        const detailResponse = await fetch(detailUrl.toString(), {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const detailText = await detailResponse.text();
+        let detailData = null;
+
+        if (!detailText.includes('<?xml') && !detailText.includes('<OpenAPI')) {
+          try {
+            detailData = JSON.parse(detailText);
+          } catch (error) {
+            console.error('상세 정보 JSON 파싱 오류:', error);
+          }
+        } else {
+          try {
+            const detailResult = await parseStringPromise(detailText, { explicitArray: false });
+            const detailItems = detailResult.OpenAPI_ServiceResponse?.body?.items?.item;
+            if (detailItems) {
+              detailData = {
+                body: {
+                  items: Array.isArray(detailItems) ? detailItems : [detailItems]
+                }
+              };
+            }
+          } catch (error) {
+            console.error('상세 정보 XML 파싱 오류:', error);
+          }
+        }
+
+        // 결과 구성
+        const mainResult = constructPillData(items[0], items.slice(1), detailData?.body?.items?.[0]);
+        
+        return NextResponse.json({
+          success: true,
+          resultCode: '00',
+          data: mainResult
+        });
+      } catch (error: any) {
+        console.error('XML 파싱 오류:', error);
+        throw new Error(error.message || 'XML 응답 처리 중 오류가 발생했습니다.');
+      }
+    }
+
+    // JSON 응답 처리
+    let searchData;
+    try {
+      searchData = JSON.parse(responseText);
+    } catch (error) {
+      console.error('JSON 파싱 오류:', error, '응답:', responseText.substring(0, 200));
+      throw new Error('API 응답을 처리할 수 없습니다.');
+    }
+
+    if (!searchData.body?.items) {
+      console.error('잘못된 응답 구조:', searchData);
+      throw new Error('API 응답 구조가 올바르지 않습니다.');
+    }
+
+    const items = Array.isArray(searchData.body.items) 
+      ? searchData.body.items 
+      : [searchData.body.items];
+
+    if (!items || items.length === 0) {
+      throw new Error('알약 정보를 찾을 수 없습니다.');
+    }
+
+    // 상세 정보 조회
+    const itemSeq = items[0].ITEM_SEQ;
+    const detailUrl = new URL('http://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService04/getDrugPrdtPrmsnDtlInq03');
+    detailUrl.searchParams.append('serviceKey', decodeURIComponent(API_KEY));
+    detailUrl.searchParams.append('item_seq', itemSeq);
+    detailUrl.searchParams.append('type', 'json');
+
+    const detailResponse = await fetch(detailUrl.toString(), {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    const detailText = await detailResponse.text();
+    let detailData = null;
+
+    if (!detailText.includes('<?xml') && !detailText.includes('<OpenAPI')) {
+      try {
+        detailData = JSON.parse(detailText);
+      } catch (error) {
+        console.error('상세 정보 JSON 파싱 오류:', error);
+      }
+    } else {
+      try {
+        const detailResult = await parseStringPromise(detailText, { explicitArray: false });
+        const detailItems = detailResult.OpenAPI_ServiceResponse?.body?.items?.item;
+        if (detailItems) {
+          detailData = {
+            body: {
+              items: Array.isArray(detailItems) ? detailItems : [detailItems]
+            }
+          };
+        }
+      } catch (error) {
+        console.error('상세 정보 XML 파싱 오류:', error);
+      }
+    }
+
+    // 메인 결과 구성
+    const mainResult = constructPillData(items[0], items.slice(1), detailData?.body?.items?.[0]);
+
+    return NextResponse.json({
+      success: true,
+      resultCode: '00',
+      data: mainResult
+    });
+  } catch (error: any) {
+    console.error('알약 분석 API 오류:', error);
+    
     return NextResponse.json(
-      { 
-        error: '알약 분석 중 오류가 발생했습니다. 다시 시도해주세요.',
-        suggestion: '네트워크 연결을 확인하고 다시 시도해보세요.'
+      {
+        success: false,
+        resultCode: '99',
+        error: error.message || '알약 분석 중 오류가 발생했습니다.',
       },
       { status: 500 }
     );
@@ -388,59 +513,92 @@ async function searchPillInfo(features: {
 }
 
 // PillData 객체 구성 함수
-function constructPillData(item: any, features: any): PillData {
-  // 상세 정보 가져오기 (이 부분은 비동기지만 단순화를 위해 동기적으로 처리)
-  let detailInfo = null;
-  try {
-    // 여기서는 기본 정보만 사용합니다
-    detailInfo = {
-      efcyQesitm: '',
-      useMethodQesitm: '',
-      atpnWarnQesitm: '',
-      atpnQesitm: '',
-      intrcQesitm: '',
-      depositMethodQesitm: '',
-      itemIngredient: ''
-    };
-  } catch (error) {
-    console.error('상세 정보 가져오기 실패:', error);
-  }
-  
-  // 결과 데이터 구성
-  const pillData: PillData = {
-    itemName: item.ITEM_NAME || '',
-    entpName: item.ENTP_NAME || '',
-    itemImage: item.ITEM_IMAGE || '',
-    efcyQesitm: detailInfo?.efcyQesitm || '',
-    useMethodQesitm: detailInfo?.useMethodQesitm || '',
-    atpnWarnQesitm: detailInfo?.atpnWarnQesitm || '',
-    atpnQesitm: detailInfo?.atpnQesitm || '',
-    intrcQesitm: detailInfo?.intrcQesitm || '',
-    depositMethodQesitm: detailInfo?.depositMethodQesitm || '',
-    itemIngredient: detailInfo?.itemIngredient || '',
-    confidence: 85, // 임의의 신뢰도 값
-    color: item.COLOR_CLASS || features.color || '',
-    shape: item.DRUG_SHAPE || features.shape || '',
-    mark: item.PRINT_FRONT || features.mark || '',
-    className: item.CLASS_NAME || '',
-    otcName: item.OTC_NAME || '',
-    etcOtcName: item.ETC_OTC_NAME || '',
-    validTerm: item.VALID_TERM || '',
-    markCode: item.MARK_CODE_FRONT_ANAL || '',
-    markFront: item.MARK_CODE_FRONT || '',
-    markBack: item.MARK_CODE_BACK || '',
-    drugShape: item.DRUG_SHAPE || '',
-    chart: item.CHART || '',
-    printFront: item.PRINT_FRONT || '',
-    printBack: item.PRINT_BACK || '',
-    drugLine: item.DRUG_LINE || features.drugLine || '',
-    lengLong: item.LENG_LONG || '',
-    lengShort: item.LENG_SHORT || '',
-    thick: item.THICK || '',
-    imgRegistTs: item.IMG_REGIST_TS || '',
-    updateDe: item.UPDATE_DE || '',
-    itemSeq: item.ITEM_SEQ || ''
+function constructPillData(mainItem: any, similarItems: any[] = [], detailItem: any = {}): PillData {
+  // 색상 한글화
+  const colorMap: { [key: string]: string } = {
+    'white': '흰색',
+    'yellow': '노란색',
+    'orange': '주황색',
+    'pink': '분홍색',
+    'red': '빨간색',
+    'brown': '갈색',
+    'green': '초록색',
+    'blue': '파란색',
+    'purple': '보라색',
+    'gray': '회색',
+    'black': '검정색',
+    'transparent': '투명'
   };
-  
-  return pillData;
-} 
+
+  // 모양 한글화
+  const shapeMap: { [key: string]: string } = {
+    'circle': '원형',
+    'oval': '타원형',
+    'capsule': '캡슐형',
+    'rectangle': '사각형',
+    'diamond': '마름모형',
+    'triangle': '삼각형',
+    'pentagon': '오각형',
+    'hexagon': '육각형',
+    'octagon': '팔각형'
+  };
+
+  // 분할선 한글화
+  const lineMap: { [key: string]: string } = {
+    '-': '없음',
+    '+': '십자',
+    '/': '사선',
+    '|': '단선'
+  };
+
+  return {
+    itemName: mainItem.ITEM_NAME || '',
+    entpName: mainItem.ENTP_NAME || '',
+    itemImage: mainItem.ITEM_IMAGE || '',
+    className: mainItem.CLASS_NAME || '',
+    etcOtcName: mainItem.ETC_OTC_NAME || '',
+    
+    // 물리적 특성 (한글화)
+    color: colorMap[mainItem.COLOR_CLASS?.toLowerCase()] || mainItem.COLOR_CLASS || '',
+    shape: shapeMap[mainItem.DRUG_SHAPE?.toLowerCase()] || mainItem.DRUG_SHAPE || '',
+    mark: mainItem.PRINT_FRONT || '',
+    markFront: mainItem.MARK_CODE_FRONT || mainItem.PRINT_FRONT || '',
+    markBack: mainItem.MARK_CODE_BACK || mainItem.PRINT_BACK || '',
+    drugLine: lineMap[mainItem.DRUG_LINE] || mainItem.DRUG_LINE || mainItem.LINE_FRONT || '',
+    chart: mainItem.CHART || '',
+    
+    // 크기 정보
+    lengLong: mainItem.LENG_LONG || '',
+    lengShort: mainItem.LENG_SHORT || '',
+    thick: mainItem.THICK || '',
+    
+    // 상세 정보
+    itemIngredient: detailItem.MATERIAL_NAME || '',
+    efficacy: detailItem.EE_DOC_DATA || '',
+    useMethod: detailItem.UD_DOC_DATA || '',
+    caution: detailItem.NB_DOC_DATA || '',
+    interaction: detailItem.IA_DOC_DATA || '',
+    sideEffect: detailItem.SE_DOC_DATA || '',
+    
+    // 유효기간 및 갱신일
+    validTerm: mainItem.VALID_TERM || '',
+    updateDe: mainItem.UPDATE_DE || '',
+    
+    // 분석 결과
+    confidence: 95,
+    similarItems: similarItems.map(item => ({
+      itemName: item.ITEM_NAME || '',
+      entpName: item.ENTP_NAME || '',
+      itemImage: item.ITEM_IMAGE || '',
+      className: item.CLASS_NAME || '',
+      etcOtcName: item.ETC_OTC_NAME || '',
+      color: colorMap[item.COLOR_CLASS?.toLowerCase()] || item.COLOR_CLASS || '',
+      shape: shapeMap[item.DRUG_SHAPE?.toLowerCase()] || item.DRUG_SHAPE || '',
+      chart: item.CHART || '',
+      drugLine: lineMap[item.DRUG_LINE] || item.DRUG_LINE || item.LINE_FRONT || '',
+      markFront: item.MARK_CODE_FRONT || item.PRINT_FRONT || '',
+      markBack: item.MARK_CODE_BACK || item.PRINT_BACK || '',
+      confidence: 85
+    }))
+  };
+}

@@ -6,6 +6,7 @@ import Script from 'next/script';
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/header';
 import Link from 'next/link';
+import { AuthProvider } from '@/components/auth/auth-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -51,7 +52,7 @@ export default function RootLayout({
       >
         <Providers>
           <Header />
-          {children}
+          <AuthProvider>{children}</AuthProvider>
           <Toaster />
         </Providers>
       </body>

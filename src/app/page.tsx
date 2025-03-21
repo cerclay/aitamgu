@@ -76,26 +76,34 @@ export default function Home() {
   // AI 서비스 카테고리 카드
   const aiServiceCards = [
     {
-      title: '유명인 책 추천기',
-      description: '유명인들이 읽은 책과 유사한 책을 AI가 추천해 드립니다.',
-      href: '/celebrity-books',
-      icon: '📚',
+      title: '주식 분석기',
+      description: '관심 있는 주식의 미래 전망을 AI가 분석해 드립니다.',
+      href: '/stock-analyzer',
+      icon: '📈',
+      isExternal: false,
+      badge: '인기'
+    },
+    {
+      title: '기업용챗봇',
+      description: '기업 맞춤형 AI 챗봇을 구축하고 관리할 수 있습니다.',
+      href: '/business-chatbot',
+      icon: '🤖',
       isExternal: false,
       badge: '신규'
+    },
+    {
+      title: '손금 분석기',
+      description: 'AI가 당신의 손금을 분석하여 운세를 알려드립니다.',
+      href: '/palmistry',
+      icon: '✋',
+      isExternal: false,
+      badge: '인기'
     },
     {
       title: '유튜브 영상 요약',
       description: '유튜브 영상의 내용을 AI가 요약해 핵심만 빠르게 파악하세요.',
       href: '/youtube-insight',
       icon: '📺',
-      isExternal: false,
-      badge: '인기'
-    },
-    {
-      title: '음식 칼로리 측정기',
-      description: '음식 사진을 업로드하면 AI가 칼로리를 측정해 드립니다.',
-      href: '/calorie-calculator',
-      icon: '🍔',
       isExternal: false,
       badge: '인기'
     },
@@ -107,19 +115,34 @@ export default function Home() {
       isExternal: false
     },
     {
+      title: '알약 카메라',
+      description: '알약 이미지로 약품 정보 확인',
+      href: '/pill-camera',
+      icon: '💊',
+      isExternal: false
+    },
+    {
+      title: '유명인 책 추천기',
+      description: '유명인들이 읽은 책과 유사한 책을 AI가 추천해 드립니다.',
+      href: '/celebrity-books',
+      icon: '📚',
+      isExternal: false,
+      badge: '신규'
+    },
+    {
+      title: '음식 칼로리 측정기',
+      description: '음식 사진을 업로드하면 AI가 칼로리를 측정해 드립니다.',
+      href: '/calorie-calculator',
+      icon: '🍔',
+      isExternal: false,
+      badge: '인기'
+    },
+    {
       title: '점심 메뉴 추천',
       description: '위치, 날씨, 기분에 맞는 점심 메뉴를 추천해 드립니다.',
       href: '/lunch-recommendation',
       icon: '🍲',
       isExternal: false
-    },
-    {
-      title: '손금 분석기',
-      description: 'AI가 당신의 손금을 분석하여 운세를 알려드립니다.',
-      href: '/palmistry',
-      icon: '✋',
-      isExternal: false,
-      badge: '인기'
     },
     {
       title: '로또 번호 생성기',
@@ -129,27 +152,12 @@ export default function Home() {
       isExternal: false
     },
     {
-      title: '주식 분석기',
-      description: '관심 있는 주식의 미래 전망을 AI가 분석해 드립니다.',
-      href: '/stock-analyzer',
-      icon: '📈',
-      isExternal: false,
-      badge: '인기'
-    },
-    {
       title: '웹툰 생성기',
       description: 'AI가 당신의 아이디어를 웹툰으로 변환해 드립니다.',
       href: '/webtoon-generator',
       icon: '🎨',
       isExternal: false,
       badge: '개발중'
-    },
-    {
-      title: '알약 카메라',
-      description: '알약 이미지로 약품 정보 확인',
-      href: '/pill-camera',
-      icon: '💊',
-      isExternal: false
     }
   ];
 

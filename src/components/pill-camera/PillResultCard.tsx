@@ -1,329 +1,353 @@
 'use client';
 
 import { PillData } from '@/types/pill';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Info, Pill, ShieldAlert, ThumbsUp, Loader2, Search, CheckCircle2, Tablet } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AlertCircle, Info, Pill, Ruler, Syringe, ShieldAlert, Stethoscope } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface PillResultCardProps {
   pillData: PillData | null;
   isLoading: boolean;
-  error: string | null;
+  error?: string;
+}
+
+// HTML 태그 제거 함수
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '');
 }
 
 export function PillResultCard({ pillData, isLoading, error }: PillResultCardProps) {
-  // HTML에서 태그 제거하는 함수
-  const stripHtml = (html: string) => {
-    return html.replace(/<\/?[^>]+(>|$)/g, '');
-  };
-
   if (isLoading) {
     return (
-      <Card className="w-full border border-blue-100 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4">
+      <Card className="w-full p-6 space-y-4">
+        <div className="space-y-2">
           <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-3 w-full mt-2" />
-        </CardHeader>
-        <CardContent className="p-4 space-y-4">
-          <div className="flex items-center justify-center">
-            <div className="relative flex items-center justify-center w-24 h-24 bg-gray-100 rounded-md">
-              <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-4/5" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-500 rounded-full animate-pulse"
-              style={{ width: '65%' }}
-            />
-          </div>
-        </CardContent>
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+        <Skeleton className="h-[200px] w-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
       </Card>
     );
   }
 
   if (error) {
     return (
-      <Card className="w-full border border-red-100 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50 py-3 px-4">
-          <CardTitle className="flex items-center text-red-600 text-lg">
-            <AlertCircle className="mr-2 h-4 w-4" />
-            알약 분석 오류
-          </CardTitle>
-          <CardDescription className="text-xs">
-            알약 분석 중 문제가 발생했습니다
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4">
-          <Alert variant="destructive" className="mb-3">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-          
-          <div className="text-center mt-4">
-            <Pill className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">
-              다른 이미지로 다시 시도하거나, 더 선명한 사진을 촬영해보세요.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>분석 오류</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
   if (!pillData) {
     return (
-      <Card className="w-full border border-blue-100 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4">
-          <CardTitle className="flex items-center text-blue-700 text-lg">
-            <Search className="mr-2 h-4 w-4" />
-            알약 분석 결과
-          </CardTitle>
-          <CardDescription className="text-xs">
-            알약 이미지를 업로드하거나 촬영하면 결과가 여기에 표시됩니다
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-10 text-center text-gray-500"
-          >
-            <Tablet className="h-12 w-12 text-blue-200 mb-3" />
-            <h3 className="text-base font-medium text-gray-700 mb-2">알약 정보 확인</h3>
-            <p className="text-xs max-w-md">
-              알약 이미지를 분석하여 약품명, 효능, 용법, 주의사항 등 상세 정보를 확인해보세요.
-            </p>
-          </motion.div>
-        </CardContent>
-      </Card>
+      <Alert className="mb-4">
+        <Info className="h-4 w-4" />
+        <AlertTitle>알약을 촬영하거나 이미지를 업로드해주세요</AlertTitle>
+        <AlertDescription>
+          알약의 정면이 잘 보이도록 촬영하면 더 정확한 결과를 얻을 수 있습니다.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <Card className="w-full border border-blue-100 shadow-md">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-blue-700 text-lg line-clamp-1">{pillData.itemName}</CardTitle>
-            <CardDescription className="text-xs line-clamp-1">{pillData.entpName}</CardDescription>
-          </div>
-          <Badge className="bg-green-100 text-green-700 flex items-center gap-1 px-2 py-0.5 text-xs">
-            <CheckCircle2 className="h-3 w-3" />
-            분석 완료
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 space-y-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex flex-col items-center gap-4"
-        >
-          {pillData.itemImage ? (
-            <div className="relative w-28 h-28 overflow-hidden rounded-md border shadow-md flex-shrink-0 mx-auto">
-              <img
-                src={pillData.itemImage}
-                alt={pillData.itemName}
-                className="h-full w-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="w-28 h-28 bg-gray-100 rounded-md flex items-center justify-center flex-shrink-0 mx-auto">
-              <Pill className="h-10 w-10 text-gray-300" />
-            </div>
-          )}
-
-          <div className="w-full space-y-2">
-            <div className="flex flex-wrap gap-1.5 justify-center">
-              {pillData.className && (
-                <Badge variant="outline" className="bg-blue-50 text-xs py-0.5">
-                  {pillData.className}
-                </Badge>
+    <AnimatePresence mode="wait">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="w-full overflow-hidden border-2 border-blue-100">
+          {/* 기본 정보 섹션 */}
+          <div className="p-6 bg-gradient-to-br from-blue-50 via-white to-blue-50">
+            <div className="flex items-start gap-6">
+              {pillData.itemImage && (
+                <div className="relative flex-shrink-0">
+                  <motion.img
+                    src={pillData.itemImage}
+                    alt={pillData.itemName}
+                    className="w-40 h-40 object-contain rounded-xl shadow-lg border-2 border-blue-100 bg-white p-2"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                  <Badge className="absolute top-2 right-2 bg-blue-600 text-white font-bold px-3 py-1 rounded-full">
+                    {pillData.confidence}% 일치
+                  </Badge>
+                </div>
               )}
-              {pillData.etcOtcName && (
-                <Badge variant="outline" className="bg-purple-50 text-xs py-0.5">
-                  {pillData.etcOtcName}
-                </Badge>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-1.5 text-xs">
-              <div className="bg-gray-50 p-2 rounded">
-                <span className="text-gray-500 text-[10px]">색상</span>
-                <p className="font-medium">{pillData.color || '정보 없음'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <span className="text-gray-500 text-[10px]">모양</span>
-                <p className="font-medium">{pillData.shape || '정보 없음'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <span className="text-gray-500 text-[10px]">각인</span>
-                <p className="font-medium">{pillData.mark || '정보 없음'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <span className="text-gray-500 text-[10px]">분할선</span>
-                <p className="font-medium">{pillData.drugLine || '정보 없음'}</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-blue-900 truncate mb-1">
+                  {pillData.itemName}
+                </h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  {pillData.entpName}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="px-3 py-1 bg-blue-100 text-blue-800 font-medium">
+                    {pillData.etcOtcName}
+                  </Badge>
+                  <Badge variant="outline" className="px-3 py-1 border-blue-200 text-blue-700">
+                    {pillData.className}
+                  </Badge>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-          className="mt-2"
-        >
-          <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-9">
-              <TabsTrigger value="info" className="data-[state=active]:bg-blue-50 text-xs py-1.5">
-                <Info className="mr-1 h-3 w-3" />
-                기본 정보
+            <Separator className="my-6" />
+
+            {/* 물리적 특성 */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                <div className="flex items-center gap-2 mb-2 text-blue-700">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Pill className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">색상</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">{pillData.color || '정보 없음'}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                <div className="flex items-center gap-2 mb-2 text-blue-700">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Pill className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">모양</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">{pillData.shape || '정보 없음'}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                <div className="flex items-center gap-2 mb-2 text-blue-700">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Ruler className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">분할선</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">{pillData.drugLine || '없음'}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                <div className="flex items-center gap-2 mb-2 text-blue-700">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Pill className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">각인</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">
+                  {pillData.markFront && pillData.markBack ? 
+                    `앞면: ${pillData.markFront}, 뒷면: ${pillData.markBack}` : 
+                    pillData.markFront || '없음'}
+                </p>
+              </div>
+            </div>
+
+            {/* 크기 정보 */}
+            {(pillData.lengLong || pillData.lengShort || pillData.thick) && (
+              <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                <div className="flex items-center gap-2 mb-3 text-blue-700">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Ruler className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">크기 정보</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  {pillData.lengLong && (
+                    <div>
+                      <span className="text-sm text-gray-500">장축</span>
+                      <p className="text-lg font-semibold text-gray-900">{pillData.lengLong}mm</p>
+                    </div>
+                  )}
+                  {pillData.lengShort && (
+                    <div>
+                      <span className="text-sm text-gray-500">단축</span>
+                      <p className="text-lg font-semibold text-gray-900">{pillData.lengShort}mm</p>
+                    </div>
+                  )}
+                  {pillData.thick && (
+                    <div>
+                      <span className="text-sm text-gray-500">두께</span>
+                      <p className="text-lg font-semibold text-gray-900">{pillData.thick}mm</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 상세 정보 탭 */}
+          <Tabs defaultValue="similar" className="w-full">
+            <TabsList className="w-full grid grid-cols-4 p-2 bg-blue-50">
+              <TabsTrigger 
+                value="similar" 
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+              >
+                유사 알약
               </TabsTrigger>
-              <TabsTrigger value="usage" className="data-[state=active]:bg-blue-50 text-xs py-1.5">
-                <ThumbsUp className="mr-1 h-3 w-3" />
-                효능/용법
+              <TabsTrigger 
+                value="info" 
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+              >
+                상세정보
               </TabsTrigger>
-              <TabsTrigger value="caution" className="data-[state=active]:bg-blue-50 text-xs py-1.5">
-                <ShieldAlert className="mr-1 h-3 w-3" />
+              <TabsTrigger 
+                value="usage" 
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+              >
+                복용법
+              </TabsTrigger>
+              <TabsTrigger 
+                value="caution" 
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+              >
                 주의사항
               </TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="info" className="mt-3 space-y-3">
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="ingredients" className="border rounded-md py-1">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-blue-700 flex items-center">
-                      <Info className="h-3.5 w-3.5 mr-1.5" />
-                      성분
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{pillData.itemIngredient || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="size" className="border rounded-md py-1 mt-2">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-blue-700 flex items-center">
-                      <Info className="h-3.5 w-3.5 mr-1.5" />
-                      크기 정보
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <div className="grid grid-cols-3 gap-1.5 text-xs">
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="text-gray-500 text-[10px]">장축</span>
-                        <p className="font-medium">{pillData.lengLong || '정보 없음'}</p>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="text-gray-500 text-[10px]">단축</span>
-                        <p className="font-medium">{pillData.lengShort || '정보 없음'}</p>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="text-gray-500 text-[10px]">두께</span>
-                        <p className="font-medium">{pillData.thick || '정보 없음'}</p>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+
+            <TabsContent value="similar" className="p-4">
+              <ScrollArea className="h-[400px]">
+                {pillData.similarItems && pillData.similarItems.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {pillData.similarItems.map((item, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50"
+                      >
+                        <div className="flex items-center gap-4">
+                          {item.itemImage && (
+                            <img
+                              src={item.itemImage}
+                              alt={item.itemName}
+                              className="w-20 h-20 object-contain rounded-lg border border-blue-100 bg-white p-1"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-blue-900 truncate">{item.itemName}</h3>
+                            <p className="text-sm text-gray-500 truncate mt-1">
+                              {item.entpName}
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                {item.color}
+                              </Badge>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                {item.shape}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    유사한 알약 정보가 없습니다.
+                  </div>
+                )}
+              </ScrollArea>
             </TabsContent>
-            
-            <TabsContent value="usage" className="mt-3 space-y-3">
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="efficacy" className="border rounded-md py-1">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-green-700 flex items-center">
-                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
-                      효능
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.efcyQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="usage" className="border rounded-md py-1 mt-2">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-green-700 flex items-center">
-                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
-                      용법
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.useMethodQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="storage" className="border rounded-md py-1 mt-2">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-green-700 flex items-center">
-                      <ThumbsUp className="h-3.5 w-3.5 mr-1.5" />
-                      보관법
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.depositMethodQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+
+            <TabsContent value="info" className="p-4">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                    <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <Syringe className="h-4 w-4" />
+                      </div>
+                      성분 정보
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {stripHtml(pillData.itemIngredient) || '정보가 없습니다.'}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                    <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <Stethoscope className="h-4 w-4" />
+                      </div>
+                      효능・효과
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {stripHtml(pillData.efficacy) || '정보가 없습니다.'}
+                    </p>
+                  </div>
+                </div>
+              </ScrollArea>
             </TabsContent>
-            
-            <TabsContent value="caution" className="mt-3 space-y-3">
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="warnings" className="border rounded-md py-1">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-red-700 flex items-center">
-                      <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
-                      경고
+
+            <TabsContent value="usage" className="p-4">
+              <ScrollArea className="h-[400px]">
+                <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                  <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-blue-50 rounded-lg">
+                      <Pill className="h-4 w-4" />
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.atpnWarnQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="precautions" className="border rounded-md py-1 mt-2">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-red-700 flex items-center">
-                      <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
+                    용법・용량
+                  </h3>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {stripHtml(pillData.useMethod) || '정보가 없습니다.'}
+                  </p>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="caution" className="p-4">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                    <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <ShieldAlert className="h-4 w-4" />
+                      </div>
                       주의사항
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.atpnQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="interactions" className="border rounded-md py-1 mt-2">
-                  <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-gray-50">
-                    <div className="font-medium text-xs text-red-700 flex items-center">
-                      <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {stripHtml(pillData.caution) || '정보가 없습니다.'}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                    <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <ShieldAlert className="h-4 w-4" />
+                      </div>
                       상호작용
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-2">
-                    <p className="text-xs whitespace-pre-wrap">{stripHtml(pillData.intrcQesitm) || '정보 없음'}</p>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {stripHtml(pillData.interaction) || '정보가 없습니다.'}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-blue-50">
+                    <h3 className="font-medium text-blue-800 flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <ShieldAlert className="h-4 w-4" />
+                      </div>
+                      부작용
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {stripHtml(pillData.sideEffect) || '정보가 없습니다.'}
+                    </p>
+                  </div>
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
-        </motion.div>
-      </CardContent>
-    </Card>
+        </Card>
+      </motion.div>
+    </AnimatePresence>
   );
 } 

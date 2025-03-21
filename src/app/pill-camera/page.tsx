@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { PillCameraCard } from '@/components/pill-camera/PillCameraCard';
 import { PillResultCard } from '@/components/pill-camera/PillResultCard';
-import { PillData } from '@/types/pill';
+import { PillData, PillAnalysisError } from '@/types/pill';
 import { Pill, Camera, ArrowLeft, Info, AlertCircle, HelpCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -28,55 +28,73 @@ export default function PillCameraPage() {
     setError(null);
     setErrorDetails(null);
     setErrorSuggestion(null);
+    setPillData(null);
     
     try {
-      // 이미지 파일을 FormData에 추가
-      const formData = new FormData();
-      formData.append('image', imageFile);
+      // 이미지 파일을 Base64로 변환
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+
+      // Base64 데이터에서 실제 이미지 데이터만 추출 (data:image/jpeg;base64, 부분 제거)
+      const base64Data = base64Image.split(',')[1];
       
-      // 서버에 이미지 분석 요청
+      // 내부 API 엔드포인트 호출
       const response = await fetch('/api/pill-analysis', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: base64Data
+        }),
       });
       
-      // 응답 텍스트 먼저 확인
-      const responseText = await response.text();
-      
-      // JSON으로 파싱 시도
+      // 응답이 JSON이 아닐 경우를 대비한 에러 처리
       let data;
       try {
-        data = JSON.parse(responseText);
+        data = await response.json();
       } catch (error) {
-        console.error('JSON 파싱 오류:', error, '응답 텍스트:', responseText.substring(0, 200));
+        console.error('JSON 파싱 오류:', error);
         throw new Error('알약 분석 결과를 처리할 수 없습니다. 다시 시도해주세요.');
       }
       
-      if (!response.ok) {
+      // API 응답 실패 처리
+      if (!response.ok || !data.success || data.resultCode !== '00') {
         // 에러 카운트 증가
         errorCountRef.current += 1;
         
-        // 서버에서 제공하는 오류 메시지와 세부 정보 사용
+        // API 에러 메시지 처리
         const errorMessage = data.error || '알약 분석 중 오류가 발생했습니다.';
-        const details = data.details || null;
-        const suggestion = data.suggestion || '다른 이미지로 시도해 보세요.';
-        
-        throw {
-          message: errorMessage, 
-          details,
-          suggestion
-        };
+        throw new Error(errorMessage);
       }
       
-      // 결과가 비어있는지 확인
-      if (!data || Object.keys(data).length === 0) {
+      // 결과 데이터 검증
+      if (!data.data) {
         throw new Error('알약 정보를 찾을 수 없습니다. 다른 이미지를 시도해주세요.');
+      }
+
+      const mainResult = data.data;
+      const similarItems = mainResult.similarItems || [];
+      
+      // 신뢰도가 낮은 경우 경고
+      if (mainResult.confidence < 70) {
+        setErrorSuggestion('알약 인식 신뢰도가 낮습니다. 더 선명한 이미지로 다시 시도해보세요.');
+      }
+      
+      // 유사한 알약이 있는 경우 안내
+      if (similarItems.length > 0) {
+        setErrorDetails(`유사한 알약이 ${similarItems.length}개 발견되었습니다.`);
       }
       
       // 에러 카운트 초기화
       errorCountRef.current = 0;
       
-      setPillData(data);
+      // 결과 데이터 설정
+      setPillData(mainResult);
       setShowFullResult(true);
     } catch (err: any) {
       console.error('알약 분석 실패:', err);
@@ -84,7 +102,7 @@ export default function PillCameraPage() {
       if (err.message) {
         setError(err.message);
         setErrorDetails(err.details || null);
-        setErrorSuggestion(err.suggestion || null);
+        setErrorSuggestion(err.suggestion || '다른 각도에서 다시 촬영하거나, 조명을 밝게 하여 시도해보세요.');
       } else {
         setError('알 수 없는 오류가 발생했습니다.');
       }

@@ -3,12 +3,18 @@ import { API_KEYS, SERVERLESS_TIMEOUT } from './env-config';
 
 export async function callExternalApi(
   apiName: string,
-  apiFunction: () => Promise<any>,
+  apiFunction: (apiKey: string) => Promise<any>,
   fallbackFunction: () => Promise<any>
 ) {
   try {
     console.log(`${apiName} API 호출 시작`);
-    const result = await apiFunction();
+    // API 키 가져오기
+    const apiKey = API_KEYS[apiName] || '';
+    if (!apiKey) {
+      console.error(`${apiName} API 키가 설정되지 않았습니다`);
+      throw new Error(`API 키가 없습니다: ${apiName}`);
+    }
+    const result = await apiFunction(apiKey);
     console.log(`${apiName} API 호출 성공`);
     return result;
   } catch (error) {

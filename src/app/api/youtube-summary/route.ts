@@ -5,9 +5,12 @@ import { getSubtitles } from 'youtube-captions-scraper';
 import { OpenAI } from 'openai';
 
 const youtube = google.youtube('v3');
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+
+// OpenAI API 키 조건부 초기화
+const openaiApiKey = process.env.OPENAI_API_KEY || '';
+const openai = openaiApiKey ? new OpenAI({
+  apiKey: openaiApiKey,
+}) : null;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -59,23 +62,30 @@ export async function GET(request: Request) {
         
         // OpenAI API를 사용하여 요약
         let summary = '';
-        if (transcriptText) {
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              {
-                role: 'system',
-                content: '당신은 유튜브 영상 내용을 간결하고 정확하게 요약하는 도우미입니다. 한국어로 응답해주세요.'
-              },
-              {
-                role: 'user',
-                content: `다음 유튜브 영상의 자막 내용을 3~5개의 주요 포인트로 요약해주세요. 제목: ${title}\n\n자막: ${transcriptText}`
-              }
-            ],
-            max_tokens: 500
-          });
-          
-          summary = completion.choices[0].message.content || '';
+        if (transcriptText && openai) {
+          try {
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-3.5-turbo',
+              messages: [
+                {
+                  role: 'system',
+                  content: '당신은 유튜브 영상 내용을 간결하고 정확하게 요약하는 도우미입니다. 한국어로 응답해주세요.'
+                },
+                {
+                  role: 'user',
+                  content: `다음 유튜브 영상의 자막 내용을 3~5개의 주요 포인트로 요약해주세요. 제목: ${title}\n\n자막: ${transcriptText}`
+                }
+              ],
+              max_tokens: 500
+            });
+            
+            summary = completion.choices[0].message.content || '';
+          } catch (error) {
+            console.error('OpenAI API 호출 오류:', error);
+            summary = '요약을 생성하는 중 오류가 발생했습니다. OpenAI API 키를 확인해주세요.';
+          }
+        } else if (!openai) {
+          summary = 'OpenAI API 키가 설정되지 않아 요약을 생성할 수 없습니다.';
         } else {
           summary = '이 영상에 대한 자막이 없어 요약할 수 없습니다.';
         }
@@ -101,22 +111,33 @@ export async function GET(request: Request) {
           const title = data.title || 'Unknown Title';
           
           // 제목으로 가상의 요약 생성
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              {
-                role: 'system',
-                content: '당신은 유튜브 영상 제목만 보고 가능한 내용을 추측하여 요약하는 도우미입니다. 한국어로 응답해주세요.'
-              },
-              {
-                role: 'user',
-                content: `다음 유튜브 영상의 제목만 보고 가능한 내용을 추측하여 가상의 요약을 작성해주세요. 이는 실제 내용이 아닌 추측임을 명시해주세요. 제목: ${title}`
-              }
-            ],
-            max_tokens: 500
-          });
+          let summary = '요약을 생성할 수 없습니다.';
           
-          const summary = completion.choices[0].message.content || '';
+          if (openai) {
+            try {
+              const completion = await openai.chat.completions.create({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                  {
+                    role: 'system',
+                    content: '당신은 유튜브 영상 제목만 보고 가능한 내용을 추측하여 요약하는 도우미입니다. 한국어로 응답해주세요.'
+                  },
+                  {
+                    role: 'user',
+                    content: `다음 유튜브 영상의 제목만 보고 가능한 내용을 추측하여 가상의 요약을 작성해주세요. 이는 실제 내용이 아닌 추측임을 명시해주세요. 제목: ${title}`
+                  }
+                ],
+                max_tokens: 500
+              });
+              
+              summary = completion.choices[0].message.content || '';
+            } catch (error) {
+              console.error('OpenAI API 호출 오류:', error);
+              summary = '요약을 생성하는 중 오류가 발생했습니다. OpenAI API 키를 확인해주세요.';
+            }
+          } else {
+            summary = 'OpenAI API 키가 설정되지 않아 요약을 생성할 수 없습니다.';
+          }
           
           return {
             videoId,
