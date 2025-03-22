@@ -28,7 +28,18 @@ export default function StockAnalyzer() {
   };
 
   const analyzeStock = async () => {
+    if (!ticker) {
+      toast({
+        title: "티커 심볼이 필요합니다",
+        description: "분석할 주식의 티커 심볼을 입력해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
+
     try {
       // 주식 정보 가져오기
       console.log(`주식 분석 시작: ${ticker}`);
@@ -54,8 +65,19 @@ export default function StockAnalyzer() {
         setStockData(stockDataWithPatterns);
         setPrediction(prediction);
         setError(null);
+
+        toast({
+          title: "분석 완료",
+          description: "주식 데이터 분석이 완료되었습니다.",
+        });
       } catch (predictionErr) {
         console.error('주가 예측 생성 오류:', predictionErr);
+        toast({
+          title: "예측 생성 실패",
+          description: "주가 예측을 생성하는데 실패했습니다. 기본 모델로 재시도합니다.",
+          variant: "destructive"
+        });
+
         // 기본 모델로 재시도
         const prediction = await generatePrediction(ticker, stockDataWithPatterns, economicIndicators, 'default');
         setStockData(stockDataWithPatterns);
@@ -65,6 +87,11 @@ export default function StockAnalyzer() {
     } catch (err) {
       console.error('주식 분석 오류:', err);
       setError('주식 데이터를 가져오는 중 오류가 발생했습니다. 다시 시도해주세요.');
+      toast({
+        title: "분석 실패",
+        description: "주식 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -100,13 +127,19 @@ export default function StockAnalyzer() {
               onChange={handleTickerChange}
               onKeyDown={handleKeyDown}
               className="sm:max-w-md text-sm md:text-base"
+              disabled={isLoading}
             />
             <Button 
               onClick={analyzeStock} 
               disabled={isLoading}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all text-sm md:text-base"
             >
-              {isLoading ? '분석 중...' : '분석하기'}
+              {isLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  분석 중...
+                </>
+              ) : '분석하기'}
             </Button>
           </div>
         </CardContent>
@@ -143,23 +176,49 @@ export default function StockAnalyzer() {
 
 function LoadingState() {
   return (
-    <div className="space-y-6">
-      <Card className="shadow-md">
+    <div className="space-y-4 md:space-y-6">
+      <Card className="shadow-md border-blue-50">
         <CardHeader>
-          <Skeleton className="h-8 w-1/3" />
-          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-6 md:h-8 w-1/3" />
+          <Skeleton className="h-3 md:h-4 w-1/2 mt-2" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Skeleton className="h-48 md:h-64 w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-40 md:h-64 w-full" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <Skeleton className="h-20 md:h-24 w-full" />
+              <Skeleton className="h-20 md:h-24 w-full" />
+              <Skeleton className="h-20 md:h-24 w-full hidden md:block" />
             </div>
           </div>
         </CardContent>
       </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="shadow-md border-blue-50">
+          <CardHeader>
+            <Skeleton className="h-6 md:h-8 w-1/3" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/6" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-md border-blue-50">
+          <CardHeader>
+            <Skeleton className="h-6 md:h-8 w-1/3" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-4/6" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -1159,22 +1218,28 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
   }
   
   // 이중 바닥 패턴 확인 (간단한 구현)
-  if (priceCount >= 60) {
-    const section1 = historicalPrices.slice(-60, -40);
-    const section2 = historicalPrices.slice(-30, -10);
+  if (recentPrices.length >= 20) {
+    const prices = recentPrices.map(p => p.price);
+    const troughs = findTroughs(prices, 3);
     
-    const min1 = Math.min(...section1.map(p => p.price));
-    const min2 = Math.min(...section2.map(p => p.price));
-    
-    // 두 바닥이 비슷한 수준인지 확인 (5% 이내)
-    if (Math.abs(min1 - min2) / min1 < 0.05 && upDays > downDays) {
-      patterns.push({
-        name: '이중 바닥',
-        bullish: true,
-        descriptionKr: '주가가 두 번 유사한 수준에서 반등한 패턴으로, 상승 전환을 시사합니다. 이 패턴은 하락 추세가 끝나고 새로운 상승 추세가 시작될 가능성이 높다는 것을 나타냅니다.',
-        confidence: 75,
-        tradingActions: '이중 바닥 패턴이 확인되면 추가 상승을 예상하여 단계적 매수 전략을 고려할 수 있습니다. 두 번째 바닥 이후 상승 확인 시 매수하고, 이전 고점을 손절선으로 설정하는 것이 좋습니다.'
-      });
+    if (troughs.length >= 2) {
+      const lastTroughIdx = troughs[troughs.length - 1];
+      const secondLastTroughIdx = troughs[troughs.length - 2];
+      
+      const min1 = prices[secondLastTroughIdx];
+      const min2 = prices[lastTroughIdx];
+      
+      // 두 바닥이 비슷한 수준인지 확인 (5% 이내)
+      if (Math.abs(min1 - min2) / min1 < 0.05 && upDays > downDays) {
+        patterns.push({
+          name: '이중 바닥',
+          bullish: true,
+          description: 'A double bottom pattern occurs when prices form two distinct lows at approximately the same price level, indicating a potential reversal from a downtrend to an uptrend.',
+          descriptionKr: '주가가 두 번 유사한 수준에서 반등한 패턴으로, 상승 전환을 시사합니다. 이 패턴은 하락 추세가 끝나고 새로운 상승 추세가 시작될 가능성이 높다는 것을 나타냅니다.',
+          confidence: 75,
+          tradingActions: '이중 바닥 패턴이 확인되면 추가 상승을 예상하여 단계적 매수 전략을 고려할 수 있습니다. 두 번째 바닥 이후 상승 확인 시 매수하고, 이전 고점을 손절선으로 설정하는 것이 좋습니다.'
+        });
+      }
     }
   }
   
@@ -1183,6 +1248,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
     patterns.push({
       name: '상승 추세',
       bullish: true,
+      description: 'An uptrend is characterized by higher highs and higher lows, indicating strong buying pressure and positive momentum.',
       descriptionKr: '최근 30일 동안 상승일이 하락일보다 많아, 강한 상승 추세를 보이고 있습니다. 이는 시장 참여자들 사이에 긍정적인 심리가 우세함을 나타냅니다.',
       confidence: 70,
       tradingActions: '상승 추세에서는 조정 시 매수 전략이 유효합니다. 단기 이동평균선(20일선) 근처로 조정될 때 매수 기회를 고려하고, 추세가 꺾이지 않는 한 보유 전략을 유지하세요.'
@@ -1194,6 +1260,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
     patterns.push({
       name: '하락 추세',
       bullish: false,
+      description: 'A downtrend is characterized by lower highs and lower lows, indicating strong selling pressure and negative momentum.',
       descriptionKr: '최근 30일 동안 하락일이 상승일보다 많아, 강한 하락 추세를 보이고 있습니다. 이는 시장 참여자들 사이에 부정적인 심리가 우세하다는 신호입니다.',
       confidence: 70,
       tradingActions: '하락 추세에서는 반등 시 매도 전략이 유효합니다. 단기 이동평균선(20일선) 근처로 반등할 때 매도 기회를 고려하고, 보유 중인 경우 손실 제한을 위해 손절 전략을 수립하세요.'
@@ -1210,6 +1277,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
     patterns.push({
       name: '볼린저 밴드 상단 돌파',
       bullish: false,
+      description: 'Price breaking above the upper Bollinger Band indicates overbought conditions.',
       descriptionKr: '주가가 볼린저 밴드 상단을 돌파했으며, 이는 과매수 상태를 나타냅니다. 주가가 정상 범위를 벗어나 지나치게 상승했을 가능성이 있습니다.',
       confidence: 65,
       tradingActions: '상단 돌파 후에는 단기 조정 가능성이 높습니다. 보유 주식의 일부 이익 실현을 고려하거나, 새로운 매수는 밴드 중앙선으로 조정된 후에 검토하세요.'
@@ -1220,6 +1288,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
     patterns.push({
       name: '볼린저 밴드 하단 돌파',
       bullish: true,
+      description: 'Price breaking below the lower Bollinger Band indicates oversold conditions.',
       descriptionKr: '주가가 볼린저 밴드 하단을 돌파했으며, 이는 과매도 상태를 나타냅니다. 주가가 정상 범위를 벗어나 지나치게 하락했을 가능성이 있습니다.',
       confidence: 65,
       tradingActions: '하단 돌파 후에는 단기 반등 가능성이 높습니다. 소량의 분할 매수 전략을 고려하고, 추가 하락 시 추가 매수 기회로 활용할 수 있습니다.'
@@ -1241,6 +1310,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
       patterns.push({
         name: '골든 크로스',
         bullish: true,
+        description: 'A golden cross occurs when a short-term moving average crosses above a long-term moving average, signaling a potential bullish trend.',
         descriptionKr: '단기 이동평균선이 장기 이동평균선을 상향 돌파한 패턴으로, 강력한 상승 추세 시작을 나타냅니다. 기술적 분석에서 가장 강력한 매수 신호 중 하나입니다.',
         confidence: 80,
         tradingActions: '골든 크로스는 중장기 매수 신호입니다. 확인 후 단계적 매수 전략을 고려하고, 추세가 강화될수록 포지션을 늘릴 수 있습니다. 50일선이 지지선 역할을 할 것입니다.'
@@ -1251,6 +1321,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
       patterns.push({
         name: '데드 크로스',
         bullish: false,
+        description: 'A death cross occurs when a short-term moving average crosses below a long-term moving average, signaling a potential bearish trend.',
         descriptionKr: '단기 이동평균선이 장기 이동평균선을 하향 돌파한 패턴으로, 강력한 하락 추세 시작을 나타냅니다. 기술적 분석에서 가장 강력한 매도 신호 중 하나입니다.',
         confidence: 80,
         tradingActions: '데드 크로스는 중장기 매도 신호입니다. 보유 중인 포지션의 축소나 청산을 고려하세요. 반등 시 추가 매도 기회로 활용할 수 있으며, 50일선이 저항선 역할을 할 것입니다.'
@@ -1276,6 +1347,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
         patterns.push({
           name: '헤드앤숄더',
           bullish: false,
+          description: 'A head and shoulders pattern is a reversal pattern that signals a potential trend change from bullish to bearish.',
           descriptionKr: '좌우 어깨와 중앙 머리로 구성된 반전 패턴으로, 상승 추세에서 하락 추세로의 전환을 나타냅니다. 목선(neckline) 돌파는 중요한 확인 신호입니다.',
           confidence: 75,
           tradingActions: '목선 하향 돌파 확인 시 매도 신호로 간주하고 포지션을 줄이거나 청산을 고려하세요. 목표가는 보통 헤드에서 목선까지의 높이만큼 목선 아래로 설정합니다.'
@@ -1302,6 +1374,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
         patterns.push({
           name: '역헤드앤숄더',
           bullish: true,
+          description: 'An inverse head and shoulders pattern is a reversal pattern that signals a potential trend change from bearish to bullish.',
           descriptionKr: '좌우 어깨와 중앙 머리로 구성된 반전 패턴으로, 하락 추세에서 상승 추세로의 전환을 나타냅니다. 목선(neckline) 상향 돌파는 중요한 확인 신호입니다.',
           confidence: 75,
           tradingActions: '목선 상향 돌파 확인 시 매수 신호로 간주하고 단계적 매수 전략을 고려하세요. 목표가는 보통 머리에서 목선까지의 깊이만큼 목선 위로 설정합니다.'
@@ -1315,6 +1388,7 @@ async function analyzePatterns(historicalPrices: HistoricalPrice[]): Promise<Cha
     patterns.push({
       name: '측정 가능한 패턴 없음',
       bullish: upDays > downDays,
+      description: 'No clear technical patterns detected. The market may be in a consolidation phase or lacking clear direction.',
       descriptionKr: '현재 차트에서 명확한 기술적 패턴이 발견되지 않았습니다. 이는 시장이 방향성 없이 횡보하거나, 새로운 추세가 아직 형성되지 않았음을 의미할 수 있습니다.',
       confidence: 50,
       tradingActions: '뚜렷한 패턴이 보이지 않을 때는 적극적인 포지션보다 관망 전략이 적합합니다. 새로운 패턴이 형성될 때까지 기다리거나 위험 관리에 집중하세요.'
