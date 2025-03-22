@@ -127,9 +127,23 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
   try {
     console.log(`야후 파이낸스 데이터 요청 시작: ${symbol}`);
     
-    // 종목 정보 조회
-    const quote = await yahooFinance.quote(symbol);
-    console.log('종목 기본 정보 가져옴:', quote?.shortName || symbol);
+    // 타임아웃 설정
+    const timeout = 20000; // 20초
+    
+    // 종목 정보 조회 - 타임아웃 및 재시도 로직 추가
+    console.log('종목 기본 정보 요청 중...');
+    const quotePromise = yahooFinance.quote(symbol, {timeout});
+    let quote;
+    
+    try {
+      quote = await quotePromise;
+      console.log('종목 기본 정보 가져옴:', quote?.shortName || symbol);
+    } catch (quoteError) {
+      console.error('종목 기본 정보 요청 실패, 재시도 중...', quoteError);
+      // 잠시 대기 후 재시도
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      quote = await yahooFinance.quote(symbol, {timeout});
+    }
     
     if (!quote || !quote.shortName) {
       throw new Error(`${symbol} 종목 정보를 찾을 수 없습니다`);
@@ -140,24 +154,67 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
     startDate.setFullYear(startDate.getFullYear() - 1);
     
     console.log('과거 주가 데이터 요청 중...');
-    const historical = await yahooFinance.historical(symbol, {
-      period1: startDate,
-      interval: '1d'
-    });
-    console.log(`과거 주가 데이터 ${historical.length}개 항목 받음`);
+    let historical;
+    
+    try {
+      historical = await yahooFinance.historical(symbol, {
+        period1: startDate,
+        interval: '1d',
+        timeout
+      });
+      console.log(`과거 주가 데이터 ${historical.length}개 항목 받음`);
+    } catch (historicalError) {
+      console.error('과거 주가 데이터 요청 실패, 재시도 중...', historicalError);
+      // 잠시 대기 후 재시도
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      historical = await yahooFinance.historical(symbol, {
+        period1: startDate,
+        interval: '1d',
+        timeout
+      });
+    }
+    
+    if (!historical || historical.length === 0) {
+      console.warn('과거 주가 데이터가 없습니다. 임시 데이터를 생성합니다.');
+      historical = generateMockHistoricalData(symbol, startDate);
+    }
     
     // 기업 정보 조회
     console.log('기업 상세 정보 요청 중...');
-    const quoteSummary = await yahooFinance.quoteSummary(symbol, {
-      modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend']
-    });
-    console.log('기업 상세 정보 받음');
+    let quoteSummary;
     
-    const profile = quoteSummary.assetProfile || {};
-    const summaryDetail = quoteSummary.summaryDetail || {};
-    const financialData = quoteSummary.financialData || {};
-    const keyStats = quoteSummary.defaultKeyStatistics || {};
-    const recommendations = quoteSummary.recommendationTrend?.trend || [];
+    try {
+      quoteSummary = await yahooFinance.quoteSummary(symbol, {
+        modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend'],
+        timeout
+      });
+      console.log('기업 상세 정보 받음');
+    } catch (summaryError) {
+      console.error('기업 상세 정보 요청 실패, 재시도 중...', summaryError);
+      // 잠시 대기 후 재시도
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        quoteSummary = await yahooFinance.quoteSummary(symbol, {
+          modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend'],
+          timeout
+        });
+      } catch (retryError) {
+        console.error('기업 상세 정보 재시도 실패, 제한된 정보로 계속합니다.');
+        quoteSummary = {
+          assetProfile: {},
+          summaryDetail: {},
+          financialData: {},
+          defaultKeyStatistics: {},
+          recommendationTrend: { trend: [] }
+        };
+      }
+    }
+    
+    const profile = quoteSummary?.assetProfile || {};
+    const summaryDetail = quoteSummary?.summaryDetail || {};
+    const financialData = quoteSummary?.financialData || {};
+    const keyStats = quoteSummary?.defaultKeyStatistics || {};
+    const recommendations = quoteSummary?.recommendationTrend?.trend || [];
     
     // 애널리스트 평가 합산
     const analystRatings = {
@@ -327,7 +384,7 @@ function generateMockStockData(symbol: string): StockData {
   };
   
   const basePrice = 100 + pseudoRandom(1) * 900;
-  const currentDate = new Date("2023-01-01"); // 고정된 날짜 사용
+  const currentDate = new Date(); // 현재 날짜 사용
   const historicalPrices = [];
   
   // 과거 365일 데이터 생성 (일관된 방식으로)
@@ -461,7 +518,7 @@ function generateMockStockData(symbol: string): StockData {
         title: `${symbol} 분기 실적 예상치 상회`,
         source: '경제신문',
         date: (() => {
-          const date = new Date("2023-01-01");
+          const date = new Date();
           date.setDate(date.getDate() - Math.floor(pseudoRandom(100) * 30));
           return date.toISOString().split('T')[0];
         })(),
@@ -472,7 +529,7 @@ function generateMockStockData(symbol: string): StockData {
         title: `${symbol}, 신규 제품 라인업 발표`,
         source: '비즈니스 투데이',
         date: (() => {
-          const date = new Date("2023-01-01");
+          const date = new Date();
           date.setDate(date.getDate() - Math.floor(pseudoRandom(100) * 60) - 30);
           return date.toISOString().split('T')[0];
         })(),
@@ -483,7 +540,7 @@ function generateMockStockData(symbol: string): StockData {
         title: `애널리스트들, ${symbol} 목표가 상향 조정`,
         source: '투자저널',
         date: (() => {
-          const date = new Date("2023-01-01");
+          const date = new Date();
           date.setDate(date.getDate() - Math.floor(pseudoRandom(100) * 90) - 60);
           return date.toISOString().split('T')[0];
         })(),
@@ -495,7 +552,7 @@ function generateMockStockData(symbol: string): StockData {
     upcomingEvents: [
       {
         date: (() => {
-          const date = new Date("2023-01-01");
+          const date = new Date();
           date.setDate(date.getDate() + Math.floor(pseudoRandom(100) * 30) + 1);
           return date.toISOString().split('T')[0];
         })(),
@@ -506,7 +563,7 @@ function generateMockStockData(symbol: string): StockData {
       },
       {
         date: (() => {
-          const date = new Date("2023-01-01");
+          const date = new Date();
           date.setDate(date.getDate() + Math.floor(pseudoRandom(100) * 30) + 30);
           return date.toISOString().split('T')[0];
         })(),
@@ -523,7 +580,7 @@ function generateMockStockData(symbol: string): StockData {
       relativeStrength: parseFloat((Math.random() * 100).toFixed(2)),
       sectorPerformance: parseFloat((Math.random() * 20 - 10).toFixed(2))
     },
-    lastUpdated: "2023-01-01T00:00:00.000Z" // 고정된 날짜 사용
+    lastUpdated: new Date().toISOString() // 현재 날짜 사용
   };
 }
 
@@ -754,3 +811,43 @@ Math.std = function(array) {
   const squaredDiffs = array.map(val => Math.pow(val - mean, 2));
   return Math.sqrt(squaredDiffs.reduce((sum, val) => sum + val, 0) / array.length);
 };
+
+// 모의 과거 주가 데이터 생성 함수 추가
+function generateMockHistoricalData(symbol: string, startDate: Date) {
+  const endDate = new Date();
+  const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const result = [];
+  
+  // 심볼에서 숫자 해시 생성
+  const seedValue = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const basePrice = 50 + (seedValue % 200); // 50~250 사이의 기본 가격
+  
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    
+    // 주말 제외
+    if (date.getDay() === 0 || date.getDay() === 6) continue;
+    
+    // 시드 기반 랜덤 변동
+    const dailyChange = ((Math.sin(seedValue + i) + 1) / 2) * 0.06 - 0.03; // -3%~+3% 변동
+    
+    const prevPrice = i > 0 ? result[result.length - 1].close : basePrice;
+    const close = prevPrice * (1 + dailyChange);
+    const volume = Math.floor(100000 + Math.random() * 1000000);
+    const open = close * (0.99 + Math.random() * 0.02); // +/- 1% 오프닝
+    const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+    const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+    
+    result.push({
+      date,
+      open,
+      high,
+      low,
+      close,
+      volume
+    });
+  }
+  
+  return result;
+}

@@ -29,6 +29,7 @@ interface KakaoSDK {
 
 declare global {
   interface Window {
+  clarity: any;
     Kakao: KakaoSDK;
   }
 } 

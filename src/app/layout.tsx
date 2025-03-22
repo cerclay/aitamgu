@@ -1,3 +1,7 @@
+import { ChannelIO } from '@/third-parties/Channelio';
+import Clarity from '@/third-parties/Clarity';
+import { GoogleAnalytics } from '@next/third-parties/google'
+import { GA_MEASUREMENT_ID } from './gtag';
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -39,6 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning lang="ko">
+      <ChannelIO />
       <head>
         <Script
           src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
@@ -46,7 +51,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
-      </head>
+      
+  {/* Google Analytics */}
+  <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
+      <Clarity />
+  </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -169,16 +169,55 @@ export interface ModelInfo {
 }
 
 export interface PredictionResult {
-  shortTerm: TermPrediction;
-  mediumTerm: TermPrediction;
-  longTerm: TermPrediction;
-  pricePredictions: PricePrediction[];
+  shortTerm: {
+    price: number;
+    change: number;
+    probability: number;
+    range: {
+      min: number;
+      max: number;
+    };
+  };
+  mediumTerm: {
+    price: number;
+    change: number;
+    probability: number;
+    range: {
+      min: number;
+      max: number;
+    };
+  };
+  longTerm: {
+    price: number;
+    change: number;
+    probability: number;
+    range: {
+      min: number;
+      max: number;
+    };
+  };
+  pricePredictions: Array<{
+    date: string;
+    predictedPrice: number;
+    range: {
+      min: number;
+      max: number;
+    };
+  }>;
   confidenceScore: number;
-  modelInfo: ModelInfo;
+  modelInfo: {
+    type: string;
+    accuracy: number;
+    features: string[];
+    trainPeriod: string;
+  };
   summary: string;
   strengths: string[];
   risks: string[];
-  recommendation: string;
+  recommendation: 'BUY' | 'HOLD' | 'SELL';
+  technicalAnalysis?: string;
+  fundamentalAnalysis?: string;
+  marketAnalysis?: string;
 }
 
 // AI 분석 요청 타입

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { AlertCircle, TrendingUp, DollarSign, BarChart3, Calendar, Info, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 import { fetchStockData, fetchEconomicIndicators, generatePrediction } from './api';
 import { StockData, StockDataWithPatterns, EconomicIndicator, PredictionResult, HistoricalPrice, ChartPattern } from './types';
@@ -300,7 +300,7 @@ function ResultsDisplay({
             </div>
             <div className="mt-1 sm:mt-0 text-left sm:text-right flex flex-col items-start sm:items-end">
               <p className="text-xs md:text-sm text-gray-500">마지막 업데이트</p>
-              <p className="text-xs md:text-sm font-medium">{new Date(stockData.lastUpdated).toLocaleString()}</p>
+              <p className="text-xs md:text-sm font-medium">{formatDate(stockData.lastUpdated)}</p>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -339,14 +339,18 @@ function ResultsDisplay({
                 <CardContent className="pt-3 md:pt-6 px-2 md:px-6">
                   <div className="h-48 md:h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={stockData.historicalPrices || []}>
+                      <LineChart data={stockData.historicalPrices?.filter(item => item.price > 0) || []}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis 
                           dataKey="date" 
                           tick={{ fontSize: 10 }}
                           tickFormatter={(value) => {
-                            const date = new Date(value);
-                            return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(2)}`;
+                            try {
+                              const date = new Date(value);
+                              return `${date.getMonth() + 1}/${date.getDate()}`;
+                            } catch (e) {
+                              return value;
+                            }
                           }}
                           minTickGap={15}
                         />
@@ -358,7 +362,13 @@ function ResultsDisplay({
                         />
                         <Tooltip 
                           formatter={(value) => [`$${Number(value).toFixed(2)}`, '주가']}
-                          labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                          labelFormatter={(label) => {
+                            try {
+                              return new Date(label).toLocaleDateString();
+                            } catch (e) {
+                              return label;
+                            }
+                          }}
                           contentStyle={{ fontSize: '12px' }}
                           wrapperStyle={{ zIndex: 1000 }}
                         />
@@ -371,6 +381,7 @@ function ResultsDisplay({
                           dot={false}
                           activeDot={{ r: 4 }} 
                           name="주가" 
+                          isAnimationActive={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -725,7 +736,7 @@ function ResultsDisplay({
                       <div className="flex justify-between items-center">
                         <p className="font-medium">다음 실적 발표</p>
                         <span className="font-bold">
-                          {stockData.fundamentals?.nextEarningsDate || '미정'}
+                          {stockData.fundamentals?.nextEarningsDate ? formatDate(stockData.fundamentals.nextEarningsDate) : '미정'}
                         </span>
                       </div>
                     </div>
@@ -816,19 +827,37 @@ function ResultsDisplay({
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
                         data={[
-                          ...(stockData.historicalPrices || []).slice(-30), // 최근 30일간의 실제 데이터
-                          ...(prediction.pricePredictions || []) // 예측 데이터
+                          // 최근 60일간의 실제 데이터 (필터링)
+                          ...(stockData.historicalPrices?.filter(item => item.price > 0) || []).slice(-60).map(item => ({
+                            date: item.date,
+                            price: item.price,
+                            predictedPrice: undefined
+                          })),
+                          // 예측 데이터 (필터링 및 1개월, 3개월, 6개월 구간 필터링)
+                          ...(prediction.pricePredictions?.filter(item => 
+                            item.predictedPrice > 0 && 
+                            new Date(item.date) > new Date()
+                          ) || []).map(item => ({
+                            date: item.date,
+                            price: undefined,
+                            predictedPrice: item.predictedPrice
+                          }))
                         ]}
+                        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis 
                           dataKey="date" 
                           tick={{ fontSize: 12 }}
                           tickFormatter={(value) => {
-                            const date = new Date(value);
-                            return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(2)}`;
+                            try {
+                              const date = new Date(value);
+                              return `${date.getMonth() + 1}/${date.getDate()}`;
+                            } catch (e) {
+                              return value;
+                            }
                           }}
-                          minTickGap={20}
+                          minTickGap={30}
                         />
                         <YAxis 
                           domain={['auto', 'auto']} 
@@ -837,7 +866,13 @@ function ResultsDisplay({
                           width={40}
                         />
                         <Tooltip 
-                          labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                          labelFormatter={(label) => {
+                            try {
+                              return new Date(label).toLocaleDateString();
+                            } catch (e) {
+                              return label;
+                            }
+                          }}
                           formatter={(value, name) => {
                             if (name === '주가') return [`$${Number(value).toFixed(2)}`, '실제 주가'];
                             return [`$${Number(value).toFixed(2)}`, 'AI 예측 주가'];
@@ -845,37 +880,76 @@ function ResultsDisplay({
                           wrapperStyle={{ zIndex: 1000 }}
                           contentStyle={{ fontSize: '12px' }}
                         />
-                        <Legend />
+                        <Legend verticalAlign="top" height={36} />
+                        <ReferenceLine x={new Date().toISOString().split('T')[0]} stroke="#666" strokeDasharray="3 3" label="오늘" />
                         <Line 
                           type="monotone" 
                           dataKey="price" 
-                          stroke="#8884d8" 
+                          stroke="#4F46E5" 
                           strokeWidth={2}
                           dot={false}
                           activeDot={{ r: 6 }} 
                           name="주가" 
+                          connectNulls
+                          isAnimationActive={false}
                         />
                         <Line 
                           type="monotone" 
                           dataKey="predictedPrice" 
-                          stroke="#82ca9d" 
+                          stroke="#10B981" 
                           strokeWidth={2}
-                          strokeDasharray="5 5"
                           dot={false}
                           activeDot={{ r: 6 }} 
                           name="예측 주가" 
+                          connectNulls
+                          isAnimationActive={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                   
                   <div className="rounded-lg bg-blue-50 p-4 mb-4">
-                    <p className="text-sm mb-2 font-medium">
-                      <span className="inline-block bg-blue-100 text-blue-800 rounded-full px-2 py-1 text-xs mr-2">Gemini AI</span>
-                      {stockData.ticker} 주식에 대한 종합 분석
-                    </p>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm font-medium">
+                        <span className="inline-block bg-blue-100 text-blue-800 rounded-full px-2 py-1 text-xs mr-2">Gemini AI</span>
+                        {stockData.ticker} 주식에 대한 종합 분석
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        마지막 업데이트: {new Date().toLocaleString('ko-KR', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
                     <p className="text-sm text-gray-700">{prediction.summary || '분석 정보가 없습니다.'}</p>
                   </div>
+                  
+                  {/* AI 세부 분석 섹션 추가 */}
+                  {(prediction.technicalAnalysis || prediction.fundamentalAnalysis || prediction.marketAnalysis) && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                      {prediction.technicalAnalysis && (
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm">
+                          <h4 className="text-sm font-semibold mb-1 text-blue-800">기술적 분석</h4>
+                          <p className="text-xs text-gray-700">{prediction.technicalAnalysis}</p>
+                        </div>
+                      )}
+                      {prediction.fundamentalAnalysis && (
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-lg shadow-sm">
+                          <h4 className="text-sm font-semibold mb-1 text-purple-800">기본적 분석</h4>
+                          <p className="text-xs text-gray-700">{prediction.fundamentalAnalysis}</p>
+                        </div>
+                      )}
+                      {prediction.marketAnalysis && (
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm">
+                          <h4 className="text-sm font-semibold mb-1 text-green-800">시장 환경 분석</h4>
+                          <p className="text-xs text-gray-700">{prediction.marketAnalysis}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card className="shadow-sm border-blue-50">
@@ -1032,6 +1106,19 @@ function getRandomFutureDate(maxDays: number): string {
   const futureDate = new Date(today);
   futureDate.setDate(today.getDate() + Math.floor(Math.random() * maxDays) + 1);
   return futureDate.toISOString().split('T')[0];
+}
+
+// 날짜 포맷 함수 추가
+function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    if (date.toString() === 'Invalid Date') {
+      return '날짜 없음';
+    }
+    return date.toLocaleDateString();
+  } catch (e) {
+    return '날짜 없음';
+  }
 }
 
 // RSI 상태에 따른 색상 변경 함수
@@ -1249,7 +1336,7 @@ function findPeaks(prices: number[], windowSize: number): number[] {
       }
     }
     if (isPeak) {
-      peaks.push(prices[i]);
+      peaks.push(i); // 가격 대신 인덱스를 저장하여 나중에 날짜와 함께 사용할 수 있게 함
     }
   }
   return peaks;
@@ -1267,7 +1354,7 @@ function findTroughs(prices: number[], windowSize: number): number[] {
       }
     }
     if (isTrough) {
-      troughs.push(prices[i]);
+      troughs.push(i); // 가격 대신 인덱스를 저장하여 나중에 날짜와 함께 사용할 수 있게 함
     }
   }
   return troughs;
