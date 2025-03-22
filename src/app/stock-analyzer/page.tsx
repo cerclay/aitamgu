@@ -315,22 +315,22 @@ function ResultsDisplay({
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-3 md:mb-6">
-              <TabsTrigger value="overview" className="text-xs md:text-sm p-1 md:p-2">
-                <Info className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-                <span>개요</span>
+            <TabsList className="grid grid-cols-4 md:grid-cols-4 mb-3 md:mb-6 h-auto min-h-[40px]">
+              <TabsTrigger value="overview" className="text-[10px] md:text-sm py-1.5 px-1 md:p-2 h-auto flex flex-col md:flex-row items-center">
+                <Info className="h-3 w-3 md:h-4 md:w-4 mb-0.5 md:mb-0 md:mr-1" />
+                <span className="whitespace-nowrap">개요</span>
               </TabsTrigger>
-              <TabsTrigger value="technical" className="text-xs md:text-sm p-1 md:p-2">
-                <BarChart3 className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-                <span>기술분석</span>
+              <TabsTrigger value="technical" className="text-[10px] md:text-sm py-1.5 px-1 md:p-2 h-auto flex flex-col md:flex-row items-center">
+                <BarChart3 className="h-3 w-3 md:h-4 md:w-4 mb-0.5 md:mb-0 md:mr-1" />
+                <span className="whitespace-nowrap">기술분석</span>
               </TabsTrigger>
-              <TabsTrigger value="fundamental" className="text-xs md:text-sm p-1 md:p-2">
-                <DollarSign className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-                <span>기본분석</span>
+              <TabsTrigger value="fundamental" className="text-[10px] md:text-sm py-1.5 px-1 md:p-2 h-auto flex flex-col md:flex-row items-center">
+                <DollarSign className="h-3 w-3 md:h-4 md:w-4 mb-0.5 md:mb-0 md:mr-1" />
+                <span className="whitespace-nowrap">기본분석</span>
               </TabsTrigger>
-              <TabsTrigger value="prediction" className="text-xs md:text-sm p-1 md:p-2">
-                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-                <span>AI 예측</span>
+              <TabsTrigger value="prediction" className="text-[10px] md:text-sm py-1.5 px-1 md:p-2 h-auto flex flex-col md:flex-row items-center">
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 mb-0.5 md:mb-0 md:mr-1" />
+                <span className="whitespace-nowrap">AI 예측</span>
               </TabsTrigger>
             </TabsList>
 
@@ -348,16 +348,19 @@ function ResultsDisplay({
                             const date = new Date(value);
                             return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(2)}`;
                           }}
+                          minTickGap={15}
                         />
                         <YAxis 
                           domain={['auto', 'auto']} 
                           tick={{ fontSize: 10 }}
                           tickFormatter={(value) => `$${value}`}
+                          width={35}
                         />
                         <Tooltip 
                           formatter={(value) => [`$${Number(value).toFixed(2)}`, '주가']}
                           labelFormatter={(label) => new Date(label).toLocaleDateString()}
                           contentStyle={{ fontSize: '12px' }}
+                          wrapperStyle={{ zIndex: 1000 }}
                         />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Line 
@@ -825,11 +828,13 @@ function ResultsDisplay({
                             const date = new Date(value);
                             return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(2)}`;
                           }}
+                          minTickGap={20}
                         />
                         <YAxis 
                           domain={['auto', 'auto']} 
                           tick={{ fontSize: 12 }}
                           tickFormatter={(value) => `$${value}`}
+                          width={40}
                         />
                         <Tooltip 
                           labelFormatter={(label) => new Date(label).toLocaleDateString()}
@@ -837,6 +842,8 @@ function ResultsDisplay({
                             if (name === '주가') return [`$${Number(value).toFixed(2)}`, '실제 주가'];
                             return [`$${Number(value).toFixed(2)}`, 'AI 예측 주가'];
                           }}
+                          wrapperStyle={{ zIndex: 1000 }}
+                          contentStyle={{ fontSize: '12px' }}
                         />
                         <Legend />
                         <Line 

@@ -16,9 +16,18 @@ export const LatestBlogPosts = () => {
   useEffect(() => {
     // 클라이언트 측에서만 실행
     if (typeof window !== 'undefined') {
-      const latestPosts = getLatestBlogPosts(6);
-      setPosts(latestPosts);
-      setIsLoading(false);
+      async function fetchPosts() {
+        try {
+          const latestPosts = await getLatestBlogPosts(6);
+          setPosts(latestPosts);
+        } catch (error) {
+          console.error('블로그 포스트 불러오기 오류:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      
+      fetchPosts();
     }
   }, []);
 

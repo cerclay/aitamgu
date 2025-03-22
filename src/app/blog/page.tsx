@@ -1,3 +1,15 @@
+import { getBlogPosts } from '@/features/blog/lib/blog-storage';
+
+// 서버 컴포넌트로 변환
+export default async function BlogPage() {
+  // 서버에서 데이터 가져오기
+  const posts = await getBlogPosts();
+  
+  // 나머지 클라이언트 로직을 위한 컴포넌트 사용
+  return <BlogPageClient initialPosts={posts} />;
+}
+
+// 클라이언트 컴포넌트로 분리
 'use client';
 
 import { useState } from 'react';
@@ -9,20 +21,17 @@ import { BlogCard } from '@/features/blog/components/BlogCard';
 import { AuthDialog } from '@/features/blog/components/AuthDialog';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { getBlogPosts } from '@/features/blog/lib/blog-storage';
 import { BlogPost } from '@/features/blog/types';
 
-export default function BlogPage() {
+function BlogPageClient({ initialPosts }) {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     // 클라이언트 측에서만 실행
     if (typeof window !== 'undefined') {
-      const { posts } = getBlogPosts();
-      setPosts(posts);
       setIsLoading(false);
     }
   }, []);

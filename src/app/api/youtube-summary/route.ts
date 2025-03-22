@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       'YOUTUBE',
       async (apiKey) => {
         // YouTube API를 사용하여 비디오 정보 가져오기
+        console.log('YouTube API 요청에 사용되는 키:', apiKey);
         const videoResponse = await youtube.videos.list({
           key: apiKey,
           part: ['snippet', 'contentDetails', 'statistics'],
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
             publishedAt: '날짜 정보를 가져올 수 없습니다.',
             viewCount: '조회수 정보를 가져올 수 없습니다.',
             likeCount: '좋아요 정보를 가져올 수 없습니다.',
-            summary: `*주의: 이 요약은 YouTube API 키가 없어 실제 영상 내용 분석이 아닌 제목 기반 추측입니다.*\n\n${summary}`
+            summary: `*주의: 이 요약은 YouTube API 키가 설정되지 않아 정확한 내용 분석이 불가능합니다.*\n\n아래는 제목을 바탕으로 한 추측일 뿐입니다:\n\n${summary}`
           };
         } catch (error) {
           console.error('대체 요약 생성 오류:', error);
@@ -159,7 +160,7 @@ export async function GET(request: Request) {
             publishedAt: '',
             viewCount: '',
             likeCount: '',
-            summary: 'YouTube API 키가 설정되지 않아 실제 영상 내용을 확인할 수 없습니다. API 키를 설정하고 다시 시도해주세요.'
+            summary: 'YouTube API 키가 설정되지 않아 영상 내용을 분석할 수 없습니다.\n\n설정 방법:\n1. Google Cloud Console에서 YouTube Data API v3를 활성화하세요.\n2. API 키를 생성하고 환경변수(YOUTUBE_API_KEY)에 설정하세요.\n3. 앱을 재시작한 후 다시 시도해주세요.'
           };
         }
       }

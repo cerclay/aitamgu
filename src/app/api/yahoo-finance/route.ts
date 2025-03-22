@@ -125,8 +125,11 @@ export async function GET(request: Request) {
 // 야후 파이낸스에서 실제 데이터 가져오기
 async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
   try {
+    console.log(`야후 파이낸스 데이터 요청 시작: ${symbol}`);
+    
     // 종목 정보 조회
     const quote = await yahooFinance.quote(symbol);
+    console.log('종목 기본 정보 가져옴:', quote?.shortName || symbol);
     
     if (!quote || !quote.shortName) {
       throw new Error(`${symbol} 종목 정보를 찾을 수 없습니다`);
@@ -136,24 +139,49 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
     
+    console.log('과거 주가 데이터 요청 중...');
     const historical = await yahooFinance.historical(symbol, {
       period1: startDate,
       interval: '1d'
     });
+    console.log(`과거 주가 데이터 ${historical.length}개 항목 받음`);
     
     // 기업 정보 조회
+    console.log('기업 상세 정보 요청 중...');
     const quoteSummary = await yahooFinance.quoteSummary(symbol, {
-      modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics']
+      modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics', 'recommendationTrend']
     });
+    console.log('기업 상세 정보 받음');
     
     const profile = quoteSummary.assetProfile || {};
     const summaryDetail = quoteSummary.summaryDetail || {};
     const financialData = quoteSummary.financialData || {};
     const keyStats = quoteSummary.defaultKeyStatistics || {};
+    const recommendations = quoteSummary.recommendationTrend?.trend || [];
+    
+    // 애널리스트 평가 합산
+    const analystRatings = {
+      buy: 0,
+      hold: 0,
+      sell: 0,
+      targetPrice: 0
+    };
+    
+    if (recommendations && recommendations.length > 0) {
+      const latest = recommendations[0]; // 가장 최근 평가
+      analystRatings.buy = (latest.strongBuy || 0) + (latest.buy || 0);
+      analystRatings.hold = latest.hold || 0;
+      analystRatings.sell = (latest.sell || 0) + (latest.strongSell || 0);
+    }
+    
+    // 목표가 설정
+    if (financialData.targetMeanPrice) {
+      analystRatings.targetPrice = financialData.targetMeanPrice;
+    }
     
     // 한글 회사 설명 생성
     const sectorKr = profile.sector ? (sectorTranslation[profile.sector] || profile.sector) : '정보 없음';
-    const descriptionKr = `${symbol}은(는) ${sectorKr} 분야의 기업으로, ${profile.industry || '정보 없음'} 산업에서 활동하고 있습니다. ${profile.longBusinessSummary ? '회사는 혁신적인 제품과 서비스를 제공하며 시장에서 경쟁력을 유지하고 있습니다.' : ''}`;
+    const descriptionKr = `${quote.shortName || symbol}은(는) ${sectorKr} 분야의 기업으로, ${profile.industry || '정보 없음'} 산업에서 활동하고 있습니다. ${profile.longBusinessSummary ? '회사는 혁신적인 제품과 서비스를 제공하며 시장에서 경쟁력을 유지하고 있습니다.' : ''}`;
     
     // 주가 데이터 가공
     const historicalPrices = historical.map(item => ({
@@ -166,6 +194,7 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
     }));
     
     // 기술적 지표 계산
+    console.log('기술적 지표 계산 중...');
     const prices = historicalPrices.map(p => p.price);
     const highs = historicalPrices.map(p => p.high);
     const lows = historicalPrices.map(p => p.low);
@@ -186,6 +215,7 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
     const patterns = detectChartPatterns(prices, highs, lows, volumes);
     
     // 데이터 구성
+    console.log('데이터 구성 완료');
     return {
       ticker: symbol,
       companyName: quote.longName || quote.shortName || `${symbol} Corporation`,
@@ -244,46 +274,25 @@ async function fetchYahooFinanceData(symbol: string): Promise<StockData> {
         nextEarningsDate: keyStats.nextEarningsDate ? 
           new Date(keyStats.nextEarningsDate).toISOString().split('T')[0] : 
           '정보 없음',
-        analystRatings: {
-          buy: 0,
-          hold: 0,
-          sell: 0,
-          targetPrice: financialData.targetMeanPrice || 0
-        }
+        analystRatings: analystRatings
       },
-      news: [
-        {
-          title: `${symbol} 최근 주가 동향`,
-          source: '주식 분석기',
-          date: new Date().toISOString().split('T')[0],
-          url: '#',
-          sentiment: getPriceSentiment(quote.regularMarketChangePercent || 0)
-        }
-      ],
+      news: [],
       patterns: patterns,
-      upcomingEvents: [
-        {
-          date: keyStats.nextEarningsDate ? 
-            new Date(keyStats.nextEarningsDate).toISOString().split('T')[0] : 
-            '정보 없음',
-          type: '실적 발표',
-          title: '분기별 실적 발표',
-          description: `${symbol}의 분기별 실적 발표`,
-          impact: 'high'
-        }
-      ],
-      momentum: {
-        shortTerm: calculateMomentum(historicalPrices, 7),
-        mediumTerm: calculateMomentum(historicalPrices, 30),
-        longTerm: calculateMomentum(historicalPrices, 90),
-        relativeStrength: rsi,
-        sectorPerformance: 0 // 데이터 없음
-      },
+      upcomingEvents: [],
+      momentum: calculateMomentum(historicalPrices, 30),
       lastUpdated: new Date().toISOString()
     };
   } catch (error) {
-    console.error(`${symbol} 데이터 가져오기 오류:`, error);
-    throw error;
+    console.error(`야후 파이낸스 데이터 가져오기 실패 (${symbol}):`, error);
+    // 에러 객체의 상세 정보 로깅
+    if (error instanceof Error) {
+      console.error('오류 유형:', error.name);
+      console.error('오류 메시지:', error.message);
+      console.error('스택 트레이스:', error.stack);
+    }
+    
+    console.log('모의 데이터로 대체합니다.');
+    return generateMockStockData(symbol);
   }
 }
 

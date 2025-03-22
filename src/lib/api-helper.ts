@@ -9,7 +9,14 @@ export async function callExternalApi(
   try {
     console.log(`${apiName} API 호출 시작`);
     // API 키 가져오기
-    const apiKey = API_KEYS[apiName] || '';
+    let apiKey = API_KEYS[apiName] || '';
+    
+    // YouTube API의 경우 하드코딩된 키 사용
+    if (apiName === 'YOUTUBE' && !apiKey) {
+      apiKey = 'AIzaSyDtg7fx2MakWHIDLrDbfUFEgEOBUjWCwOQ';
+      console.log(`${apiName} API 키가 환경 변수에 없어 하드코딩된 키를 사용합니다.`);
+    }
+    
     if (!apiKey) {
       console.error(`${apiName} API 키가 설정되지 않았습니다`);
       throw new Error(`API 키가 없습니다: ${apiName}`);

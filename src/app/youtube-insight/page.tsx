@@ -73,10 +73,11 @@ export default function YouTubeInsight() {
           channelName: videoInfo.snippet.channelTitle,
           uploadDate: formatPublishedDate(videoInfo.snippet.publishedAt),
           viewCount: formatViewCount(videoInfo.statistics.viewCount) + '회',
-          summary: `이 영상은 "${videoInfo.snippet.title}"에 관한 내용을 다루고 있습니다. 현재 Gemini API 키가 설정되지 않아 상세 요약을 제공할 수 없습니다. 실제 요약을 보려면 Gemini API 키를 설정해주세요.`,
+          summary: `이 영상은 "${videoInfo.snippet.title}"에 관한 내용을 다루고 있습니다. 현재 Gemini API 키가 설정되지 않아 상세 요약을 제공할 수 없습니다. 실제 요약을 보려면 Gemini API 키를 설정해주세요.\n\n설정 방법:\n1. Google AI Studio(https://makersuite.google.com/)에서 API 키를 생성하세요.\n2. 생성한 API 키를 환경변수(NEXT_PUBLIC_GEMINI_API_KEY)에 설정하세요.\n3. 앱을 재시작한 후 다시 시도해주세요.`,
           keyPoints: [
             "Gemini API 키가 설정되지 않아 상세 요약을 제공할 수 없습니다.",
             "실제 요약을 보려면 Gemini API 키를 설정해주세요.",
+            "Google AI Studio에서 무료로 API 키를 생성할 수 있습니다.",
             "영상 제목: " + videoInfo.snippet.title,
             "채널명: " + videoInfo.snippet.channelTitle,
             "업로드 날짜: " + formatPublishedDate(videoInfo.snippet.publishedAt),

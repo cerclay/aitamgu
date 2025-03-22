@@ -21,13 +21,14 @@ export function extractVideoId(url: string): string | null {
 // YouTube 영상 정보 가져오기
 export async function fetchVideoInfo(videoId: string) {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || 'AIzaSyDtg7fx2MakWHIDLrDbfUFEgEOBUjWCwOQ';
     
     if (!apiKey) {
       console.log('YouTube API 키가 설정되지 않았습니다. 모의 데이터를 반환합니다.');
       return generateMockVideoInfo(videoId);
     }
 
+    console.log('사용 중인 YouTube API 키:', apiKey);
     const response = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${apiKey}&part=snippet,contentDetails,statistics`
     );
@@ -61,7 +62,7 @@ function generateMockVideoInfo(videoId: string) {
       publishedAt: publishedDate.toISOString(),
       channelId: 'UC_mock_channel_id',
       title: '모의 YouTube 영상 제목',
-      description: '이 영상은 YouTube API 키가 설정되지 않아 생성된 모의 데이터입니다. 실제 영상 정보를 보려면 YouTube API 키를 설정해주세요.',
+      description: '이 영상은 YouTube API 키가 설정되지 않아 생성된 모의 데이터입니다. 실제 영상 정보를 보려면 YouTube API 키를 설정해주세요.\n\n설정 방법:\n1. Google Cloud Console(https://console.cloud.google.com)에서 프로젝트를 생성하세요.\n2. YouTube Data API v3를 활성화하세요.\n3. API 키를 생성하고 환경변수(NEXT_PUBLIC_YOUTUBE_API_KEY)에 설정하세요.\n4. 앱을 재시작한 후 다시 시도해주세요.',
       thumbnails: {
         default: { url: 'https://picsum.photos/120/90', width: 120, height: 90 },
         medium: { url: 'https://picsum.photos/320/180', width: 320, height: 180 },

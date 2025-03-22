@@ -91,77 +91,106 @@ ${result.keyPoints.map((point, index) => `${index + 1}. ${point}`).join('\n')}
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-      {/* 비디오 정보 헤더 */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 line-clamp-2">{result.title}</h2>
-            <p className="text-gray-600 mt-1">{result.channelName}</p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm text-gray-500">
-              <span className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                {result.uploadDate}
-              </span>
-              <span className="flex items-center">
-                <Eye className="w-4 h-4 mr-1" />
-                {result.viewCount}
-              </span>
+    <div className="bg-white rounded-xl shadow-xl overflow-hidden mb-6 border border-gray-100">
+      {/* YouTube 썸네일 추가 */}
+      {videoId && (
+        <div className="relative">
+          <div className="w-full aspect-video bg-black">
+            <img 
+              src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`} 
+              alt={result.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // maxresdefault가 없는 경우 hqdefault로 대체
+                (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+              }}
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+            <div className="p-4 md:p-6 w-full">
+              <a 
+                href={videoUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white hover:text-red-200 transition-colors"
+              >
+                <h2 className="text-xl md:text-2xl font-bold line-clamp-2 drop-shadow-md">{result.title}</h2>
+                <p className="text-gray-200 mt-1 flex items-center">
+                  <span className="mr-2">🎬</span>
+                  {result.channelName}
+                </p>
+              </a>
             </div>
           </div>
-          
-          <div className="flex space-x-2">
-            <a
-              href={videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              원본 영상
-            </a>
-            <button
-              onClick={handleCopyToClipboard}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 relative"
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              복사
-              {copied && (
-                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded">
-                  복사됨!
-                </span>
-              )}
-            </button>
-            <button
-              onClick={handleShare}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              <Share2 className="w-4 h-4 mr-2" />
-              공유
-            </button>
-          </div>
+        </div>
+      )}
+
+      {/* 비디오 정보 헤더 */}
+      <div className="p-4 md:p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-white flex flex-wrap justify-between items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+          <span className="flex items-center bg-white px-3 py-1 rounded-full shadow-sm border border-gray-200">
+            <Calendar className="w-4 h-4 mr-2 text-red-500" />
+            {result.uploadDate}
+          </span>
+          <span className="flex items-center bg-white px-3 py-1 rounded-full shadow-sm border border-gray-200">
+            <Eye className="w-4 h-4 mr-2 text-red-500" />
+            {result.viewCount}
+          </span>
+        </div>
+        
+        <div className="flex space-x-2">
+          <a
+            href={videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            원본 영상
+          </a>
+          <button
+            onClick={handleCopyToClipboard}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 relative transition-colors"
+          >
+            <Copy className="w-4 h-4 mr-2 text-red-500" />
+            복사
+            {copied && (
+              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded">
+                복사됨!
+              </span>
+            )}
+          </button>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+          >
+            <Share2 className="w-4 h-4 mr-2 text-red-500" />
+            공유
+          </button>
         </div>
       </div>
 
       {/* 요약 내용 */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-200 bg-gray-50">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
-          <Clock className="w-5 h-5 mr-2 text-red-500" />
+          <Clock className="w-5 h-5 mr-2 text-red-600" />
           요약
         </h3>
-        <p className="text-gray-700 whitespace-pre-line">{result.summary}</p>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <p className="text-gray-700 whitespace-pre-line leading-relaxed">{result.summary}</p>
+        </div>
       </div>
 
       {/* 주요 포인트 */}
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
-          <ListChecks className="w-5 h-5 mr-2 text-red-500" />
+          <ListChecks className="w-5 h-5 mr-2 text-red-600" />
           주요 포인트
         </h3>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {result.keyPoints.map((point, index) => (
-            <li key={index} className="flex">
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2 text-sm font-medium">
+            <li key={index} className="flex items-start bg-white p-3 rounded-lg shadow-sm">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-3 text-sm font-medium">
                 {index + 1}
               </span>
               <span className="text-gray-700">{point}</span>
@@ -172,24 +201,30 @@ ${result.keyPoints.map((point, index) => `${index + 1}. ${point}`).join('\n')}
 
       {/* 타임스탬프 */}
       {result.timestamps && result.timestamps.length > 0 && (
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-3">
-            <Clock className="w-5 h-5 mr-2 text-red-500" />
-            타임스탬프
+        <div className="p-6 bg-red-50">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
+            <Clock className="w-5 h-5 mr-2 text-red-600" />
+            중요 타임스탬프
           </h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {result.timestamps.map((timestamp, index) => (
               <a
                 key={index}
                 href={getTimestampUrl(timestamp.time)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                className="group flex items-start p-4 rounded-lg bg-white shadow-sm hover:bg-red-100 hover:shadow-md transition-all border border-red-100 relative"
               >
-                <span className="flex-shrink-0 px-2 py-1 bg-red-100 text-red-600 rounded font-mono text-sm mr-3">
-                  {timestamp.time}
-                </span>
-                <span className="text-gray-700">{timestamp.content}</span>
+                <div className="absolute top-2 right-2 text-xs text-gray-400 group-hover:text-red-500">유튜브로 이동 ↗</div>
+                <div className="flex-shrink-0 flex flex-col items-center mr-4">
+                  <span className="px-3 py-2 bg-red-100 text-red-600 rounded-lg font-mono text-sm font-bold border border-red-200 group-hover:bg-red-600 group-hover:text-white group-hover:shadow-md transition-colors">
+                    {timestamp.time}
+                  </span>
+                  <div className="w-0.5 h-full bg-red-200 my-1"></div>
+                </div>
+                <div>
+                  <span className="text-gray-700 font-medium group-hover:text-red-900 transition-colors">{timestamp.content}</span>
+                </div>
               </a>
             ))}
           </div>
