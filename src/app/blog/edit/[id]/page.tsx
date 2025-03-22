@@ -1,5 +1,5 @@
-// @ts-nocheck - Next.js 15 migration
 'use client';
+// @ts-nocheck - Next.js 15 migration
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';

@@ -1,18 +1,6 @@
-import { getBlogPosts } from '@/features/blog/lib/blog-storage';
-
-// 서버 컴포넌트로 변환
-export default async function BlogPage() {
-  // 서버에서 데이터 가져오기
-  const posts = await getBlogPosts();
-  
-  // 나머지 클라이언트 로직을 위한 컴포넌트 사용
-  return <BlogPageClient initialPosts={posts} />;
-}
-
-// 클라이언트 컴포넌트로 분리
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Pencil, ChevronLeft, Book } from 'lucide-react';
@@ -20,20 +8,29 @@ import { Button } from '@/components/ui/button';
 import { BlogCard } from '@/features/blog/components/BlogCard';
 import { AuthDialog } from '@/features/blog/components/AuthDialog';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { BlogPost } from '@/features/blog/types';
+import { getBlogPosts } from '@/features/blog/lib/blog-storage';
 
-function BlogPageClient({ initialPosts }) {
+export default function BlogPage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // 클라이언트 측에서만 실행
-    if (typeof window !== 'undefined') {
-      setIsLoading(false);
-    }
+    // 데이터 가져오기
+    const fetchData = async () => {
+      try {
+        const fetchedPosts = await getBlogPosts();
+        setPosts(fetchedPosts);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('블로그 데이터를 불러오는 데 실패했습니다:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
   const handleAuthSuccess = () => {
