@@ -3,7 +3,16 @@
 import { createClient } from '@/lib/supabase/client';
 import { BLOG_ADMIN_PASSWORD_KEY } from '../constants';
 
-const supabase = createClient();
+// Supabase 클라이언트는 클라이언트 측에서만 초기화
+let supabase: ReturnType<typeof createClient> | null = null;
+
+// 클라이언트 측에서만 Supabase 클라이언트 초기화
+const getSupabaseClient = () => {
+  if (typeof window !== 'undefined' && !supabase) {
+    supabase = createClient();
+  }
+  return supabase;
+};
 
 // 비밀번호 해싱 함수 (실제 구현에서는 더 안전한 해싱 라이브러리 사용 권장)
 const hashPassword = (password: string): string => {
@@ -13,19 +22,93 @@ const hashPassword = (password: string): string => {
 
 // 서버에서 비밀번호 검증
 export const verifyAdminPasswordFromServer = async (password: string): Promise<boolean> => {
-  const { data, error } = await supabase
+  const client = getSupabaseClient();
+  
+  if (!client) {
+    // 클라이언트 사이드 스토리지에서 읽기
+    if (typeof window !== 'undefined') {
+      const savedHash = localStorage.getItem(BLOG_ADMIN_PASSWORD_KEY);
+      if (!savedHash) return false;
+      return savedHash === hashPassword(password);
+    }
+    return false;
+  }
+  
+  const { data, error } = await client
     .from('system_settings')
     .select('value')
     .eq('key', BLOG_ADMIN_PASSWORD_KEY)
     .single();
   
   if (error || !data) {
-    console.error('비밀번호 검증 오류:', error);
     return false;
   }
   
-  // 비밀번호 비교 (실제로는 해시된 값을 비교해야 함)
-  return data.value === password;
+  return data.value === hashPassword(password);
+};
+
+// 관리자 비밀번호 설정 
+export const setAdminPassword = async (password: string): Promise<boolean> => {
+  const client = getSupabaseClient();
+  const hashedPassword = hashPassword(password);
+  
+  if (!client) {
+    // 클라이언트 사이드 스토리지에 저장
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(BLOG_ADMIN_PASSWORD_KEY, hashedPassword);
+      return true;
+    }
+    return false;
+  }
+  
+  // 기존 비밀번호 확인
+  const { data, error } = await client
+    .from('system_settings')
+    .select('id')
+    .eq('key', BLOG_ADMIN_PASSWORD_KEY)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('비밀번호 검사 오류:', error);
+    return false;
+  }
+  
+  if (data) {
+    // 새 비밀번호 저장 (실제로는 해시 처리)
+    const { error } = await client
+      .from('system_settings')
+      .update({ 
+        value: hashedPassword,
+        updated_at: new Date().toISOString()
+      })
+      .eq('key', BLOG_ADMIN_PASSWORD_KEY);
+    
+    if (error) {
+      console.error('비밀번호 업데이트 오류:', error);
+      return false;
+    }
+    
+    return true;
+  } else {
+    // 비밀번호 신규 생성
+    const { error } = await client
+      .from('system_settings')
+      .insert([
+        { 
+          key: BLOG_ADMIN_PASSWORD_KEY, 
+          value: hashedPassword,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]);
+    
+    if (error) {
+      console.error('비밀번호 저장 오류:', error);
+      return false;
+    }
+    
+    return true;
+  }
 };
 
 // 클라이언트 측 캐싱 (UX 개선용)
@@ -81,7 +164,7 @@ export const changeAdminPassword = async (currentPassword: string, newPassword: 
   }
   
   // 새 비밀번호 저장 (실제로는 해시 처리)
-  const { error } = await supabase
+  const { error } = await getSupabaseClient()
     .from('system_settings')
     .update({ 
       value: newPassword,

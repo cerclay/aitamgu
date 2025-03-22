@@ -12,6 +12,7 @@ import { AuthDialog } from '@/features/blog/components/AuthDialog';
 import { getBlogPostById, deleteBlogPost } from '@/features/blog/lib/blog-storage';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { isAdminAuthenticated } from '@/features/blog/lib/auth';
 
 interface BlogDetailParams {
   params: {
@@ -27,23 +28,32 @@ export default function BlogDetail({ params }: BlogDetailParams) {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'edit' | 'delete' | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const postData = getBlogPostById(id);
-        if (postData) {
-          setPost(postData);
-        } else {
-          setError('포스트를 찾을 수 없습니다.');
+      // 관리자 권한 확인
+      setIsAdmin(isAdminAuthenticated());
+      
+      // 포스트 불러오기
+      const fetchPost = async () => {
+        try {
+          const postData = await getBlogPostById(id);
+          if (postData) {
+            setPost(postData);
+          } else {
+            setError('포스트를 찾을 수 없습니다.');
+          }
+        } catch (err) {
+          console.error('포스트 로딩 오류:', err);
+          setError('포스트를 불러오는 중 오류가 발생했습니다.');
+        } finally {
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error('포스트 로딩 오류:', err);
-        setError('포스트를 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setIsLoading(false);
-      }
+      };
+      
+      fetchPost();
     }
   }, [id]);
 
@@ -134,39 +144,42 @@ export default function BlogDetail({ params }: BlogDetailParams) {
               <span>블로그로 돌아가기</span>
             </Link>
             
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => openAuthDialog('edit')}
-                className="text-blue-600 border-blue-300"
-              >
-                <Edit className="mr-1 h-4 w-4" />
-                수정
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => openAuthDialog('delete')}
-                className="text-red-600 border-red-300"
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    삭제 중...
-                  </span>
-                ) : (
-                  <>
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    삭제
-                  </>
-                )}
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => openAuthDialog('edit')}
+                  className="text-blue-600 border-blue-300"
+                >
+                  <Edit className="mr-1 h-4 w-4" />
+                  수정
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => openAuthDialog('delete')}
+                  className="text-red-600 border-red-300"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      삭제 중...
+                    </span>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      삭제
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* 블로그 포스트 내용 */}

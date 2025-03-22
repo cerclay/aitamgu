@@ -27,11 +27,12 @@ export const AuthDialog = ({ isOpen, onOpenChange, onSuccess }: AuthDialogProps)
     try {
       if (!password.trim()) {
         setError('비밀번호를 입력해주세요.');
+        setIsSubmitting(false);
         return;
       }
 
-      // 비밀번호 검증
-      const isValid = verifyAdminPassword(password);
+      // 비밀번호 검증 (비동기 작업)
+      const isValid = await verifyAdminPassword(password);
       
       if (isValid) {
         onSuccess();

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { updateBlogPost, getBlogPostById } from '@/features/blog/lib/blog-storage';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { BlogPost } from '@/features/blog/types';
+import { isAdminAuthenticated } from '@/features/blog/lib/auth';
 
 interface EditBlogPostParams {
   params: {
@@ -29,31 +30,47 @@ export default function EditBlogPost({ params }: EditBlogPostParams) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
-  // 포스트 데이터 로드
+  // 인증 상태 확인 및 포스트 데이터 로드
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const postData = getBlogPostById(id);
-        
-        if (postData) {
-          setPost(postData);
-          setTitle(postData.title);
-          setContent(postData.content);
-          setSummary(postData.summary || '');
-          setThumbnailUrl(postData.thumbnailUrl || '');
-        } else {
-          setError('포스트를 찾을 수 없습니다.');
-        }
-      } catch (err) {
-        console.error('포스트 로딩 오류:', err);
-        setError('포스트를 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setIsLoading(false);
+      // 관리자 권한 확인
+      const authStatus = isAdminAuthenticated();
+      setIsAuthenticated(authStatus);
+      
+      if (!authStatus) {
+        // 인증되지 않은 사용자는 블로그 메인으로 리디렉션
+        router.push('/blog');
+        return;
       }
+      
+      // 데이터 로드 시작
+      const fetchPost = async () => {
+        try {
+          const postData = await getBlogPostById(id);
+          
+          if (postData) {
+            setPost(postData);
+            setTitle(postData.title);
+            setContent(postData.content);
+            setSummary(postData.summary || '');
+            setThumbnailUrl(postData.thumbnailUrl || '');
+          } else {
+            setError('포스트를 찾을 수 없습니다.');
+          }
+        } catch (err) {
+          console.error('포스트 로딩 오류:', err);
+          setError('포스트를 불러오는 중 오류가 발생했습니다.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchPost();
     }
-  }, [id]);
+  }, [id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +78,13 @@ export default function EditBlogPost({ params }: EditBlogPostParams) {
     setIsSubmitting(true);
 
     try {
+      // 인증 상태 재확인
+      if (!isAuthenticated) {
+        setError('권한이 없습니다. 로그인 후 다시 시도해주세요.');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!title.trim()) {
         setError('제목을 입력해주세요.');
         setIsSubmitting(false);
@@ -80,15 +104,14 @@ export default function EditBlogPost({ params }: EditBlogPostParams) {
       }
 
       // 블로그 포스트 업데이트
-      const updatedPost = updateBlogPost({
-        ...post,
+      const success = await updateBlogPost(id, {
         title,
         content,
         summary: summary || undefined,
         thumbnailUrl: thumbnailUrl || undefined,
       });
 
-      if (updatedPost) {
+      if (success) {
         router.push(`/blog/${id}`);
       } else {
         setError('포스트를 업데이트하지 못했습니다.');
@@ -118,6 +141,23 @@ export default function EditBlogPost({ params }: EditBlogPostParams) {
               <div className="h-32 bg-gray-200 rounded w-full mb-6"></div>
               <div className="h-64 bg-gray-200 rounded w-full mb-6"></div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 인증되지 않은 경우
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-4">권한 확인 중...</h2>
+            <p className="text-gray-600 mb-6">권한이 없으면 블로그 메인 페이지로 이동합니다.</p>
+            <Link href="/blog">
+              <Button>블로그 홈으로</Button>
+            </Link>
           </div>
         </div>
       </div>

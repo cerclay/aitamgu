@@ -3,6 +3,9 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT NOT NULL,
+  summary TEXT,
+  thumbnailUrl TEXT,
+  published BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -14,6 +17,14 @@ CREATE TABLE IF NOT EXISTS system_settings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- RLS(Row Level Security) 정책 설정
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+
+-- 모든 사용자가 blog_posts 테이블을 읽을 수 있도록 정책 설정
+CREATE POLICY blog_posts_read_policy ON blog_posts 
+  FOR SELECT
+  USING (published = true);
 
 -- 비밀번호 초기값 설정 (실제 배포 시에는 변경하세요)
 INSERT INTO system_settings (key, value) 

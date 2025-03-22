@@ -10,19 +10,32 @@ import { AuthDialog } from '@/features/blog/components/AuthDialog';
 import { useRouter } from 'next/navigation';
 import { BlogPost } from '@/features/blog/types';
 import { getBlogPosts } from '@/features/blog/lib/blog-storage';
+import { isAdminAuthenticated } from '@/features/blog/lib/auth';
 
 export default function BlogPage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // 관리자 권한 확인
+    if (typeof window !== 'undefined') {
+      setIsAdmin(isAdminAuthenticated());
+    }
+    
     // 데이터 가져오기
     const fetchData = async () => {
       try {
         const fetchedPosts = await getBlogPosts();
-        setPosts(fetchedPosts);
+        // 모든 사용자에게는 published가 true인 포스트만 보여줌
+        // 관리자에게는 모든 포스트 보여줌
+        const visiblePosts = isAdmin 
+          ? fetchedPosts 
+          : fetchedPosts.filter(post => post.published);
+        
+        setPosts(visiblePosts);
         setIsLoading(false);
       } catch (error) {
         console.error('블로그 데이터를 불러오는 데 실패했습니다:', error);
@@ -31,9 +44,11 @@ export default function BlogPage() {
     };
     
     fetchData();
-  }, []);
+  }, [isAdmin]);
 
   const handleAuthSuccess = () => {
+    // 인증 성공 후 관리자 상태 업데이트
+    setIsAdmin(true);
     router.push('/blog/new');
   };
 

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { saveBlogPost } from '@/features/blog/lib/blog-storage';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { isAdminAuthenticated } from '@/features/blog/lib/auth';
 
 export default function NewBlogPost() {
   const [title, setTitle] = useState('');
@@ -19,12 +20,20 @@ export default function NewBlogPost() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
-  // 클라이언트 측에서만 렌더링되도록
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // 인증 상태 확인
+    const authStatus = isAdminAuthenticated();
+    setIsAuthenticated(authStatus);
+    
+    // 인증되지 않은 사용자는 블로그 메인으로 리디렉션
+    if (!authStatus) {
+      router.push('/blog');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +41,13 @@ export default function NewBlogPost() {
     setIsSubmitting(true);
 
     try {
+      // 인증 상태 재확인
+      if (!isAuthenticated) {
+        setError('권한이 없습니다. 로그인 후 다시 시도해주세요.');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!title.trim()) {
         setError('제목을 입력해주세요.');
         setIsSubmitting(false);
@@ -45,7 +61,7 @@ export default function NewBlogPost() {
       }
 
       // 블로그 포스트 저장
-      const newPost = saveBlogPost({
+      const newPost = await saveBlogPost({
         title,
         content,
         summary: summary || undefined,
@@ -54,7 +70,11 @@ export default function NewBlogPost() {
       });
 
       // 포스트 작성 완료 후 블로그 메인 페이지로 이동
-      router.push('/blog');
+      if (newPost) {
+        router.push('/blog');
+      } else {
+        setError('블로그 포스트를 저장하는 중 문제가 발생했습니다.');
+      }
     } catch (err) {
       console.error('블로그 저장 오류:', err);
       setError('블로그 포스트를 저장하는 중 오류가 발생했습니다.');
@@ -70,6 +90,20 @@ export default function NewBlogPost() {
   // 클라이언트 측에서만 렌더링
   if (!isClient) {
     return null;
+  }
+
+  // 인증되지 않은 사용자는 로딩 중 표시
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-4">권한 확인 중...</h2>
+            <p className="text-gray-600">권한이 없으면 블로그 메인 페이지로 이동합니다.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
